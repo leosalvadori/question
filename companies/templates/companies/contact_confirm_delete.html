@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Excluir Contato{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+	<nav class="text-sm text-muted-foreground mb-2">
+		<a href="{% url 'company_list' %}" class="hover:text-primary">Empresas</a>
+		<span class="mx-2">/</span>
+		<a href="{% url 'company_detail' company.id %}" class="hover:text-primary">{{ company.name }}</a>
+		<span class="mx-2">/</span>
+		<a href="{% url 'company_contacts' company.id %}" class="hover:text-primary">Histórico de Contatos</a>
+		<span class="mx-2">/</span>
+		<span>Excluir Contato</span>
+	</nav>
+	<h1 class="text-2xl font-semibold">Confirmar Exclusão</h1>
+</div>
+
+<div class="glass-effect rounded-xl border border-border/40 p-6 max-w-2xl">
+	<div class="mb-6">
+		<p class="text-lg mb-4">Tem certeza que deseja excluir este registro de contato?</p>
+		
+		<div class="bg-muted/50 rounded-lg p-4">
+			<p class="font-medium mb-2">{{ contact.contact_date|date:"d/m/Y H:i" }}</p>
+			<p class="text-sm whitespace-pre-wrap">{{ contact.notes }}</p>
+			{% if contact.created_by %}
+			<p class="text-xs text-muted-foreground mt-2">
+				Registrado por: {{ contact.created_by.get_full_name|default:contact.created_by.username }}
+			</p>
+			{% endif %}
+		</div>
+	</div>
+	
+	<form method="post" class="flex gap-3">
+		{% csrf_token %}
+		<button type="submit" class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">
+			Confirmar Exclusão
+		</button>
+		<a href="{% url 'company_contacts' company.id %}" class="px-4 py-2 border border-border rounded-lg hover:bg-accent">
+			Cancelar
+		</a>
+	</form>
+</div>
+{% endblock %}
+

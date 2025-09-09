@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+	<h1 class="text-xl font-semibold mb-4">Preview de Pesquisa</h1>
+	{% if error %}
+	<div class="p-3 mb-4 bg-red-100 text-red-800 rounded">{{ error }}</div>
+	{% endif %}
+	<form method="post">
+		{% csrf_token %}
+		<label class="block text-sm font-medium mb-1">Token da Pesquisa</label>
+		<input name="token" type="text" class="w-full border rounded p-2 mb-4 text-black placeholder-gray-600" placeholder="Ex: 2-M58TVW" required>
+		<button class="px-4 py-2 bg-blue-600 text-white rounded">Próximo</button>
+	</form>
+</div>
+{% endblock %}
+
+

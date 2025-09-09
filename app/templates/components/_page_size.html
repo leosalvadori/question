@@ -1,0 +1,21 @@
+<form method="get" class="flex items-center gap-2">
+  <label class="text-sm text-muted-foreground flex items-center gap-1">
+    <i data-lucide="list-filter" class="w-4 h-4"></i>
+    Itens/página
+  </label>
+  <select name="page_size" class="border rounded p-1 text-black" onchange="this.form.submit()">
+    {% with cps=current_page_size|default:15 %}
+      <option value="15" {% if cps|add:0 == 15 %}selected{% endif %}>15</option>
+      <option value="30" {% if cps|add:0 == 30 %}selected{% endif %}>30</option>
+      <option value="50" {% if cps|add:0 == 50 %}selected{% endif %}>50</option>
+    {% endwith %}
+  </select>
+  {# Preserve existing query params except page and page_size #}
+  {% for key, val in request.GET.items %}
+    {% if key != 'page' and key != 'page_size' and val %}
+      <input type="hidden" name="{{ key }}" value="{{ val }}" />
+    {% endif %}
+  {% endfor %}
+</form>
+
+

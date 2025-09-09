@@ -1,0 +1,183 @@
+<aside id="sidebar" class="fixed left-0 top-0 z-50 h-screen w-64 transform bg-gradient-to-b from-slate-950/90 to-blue-950/90 backdrop-blur-lg border-r border-border/40 transition-transform duration-300 ease-in-out md:translate-x-0 -translate-x-full md:z-40">
+  <div class="flex h-full flex-col">
+    <!-- Sidebar Header -->
+    <div class="flex items-center justify-between p-4 border-b border-border/40">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <i data-lucide="list" class="w-4 h-4 text-white"></i>
+        </div>
+        <span class="font-semibold text-sm text-primary">SGP</span>
+      </div>
+      <button id="sidebar-close" class="md:hidden p-1 text-muted-foreground hover:text-primary transition-colors rounded">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    
+    <!-- Navigation Menu -->
+    <nav class="flex-1 overflow-y-auto scrollbar-custom p-4" style="max-height: calc(100vh - 120px);">
+      <ul class="space-y-2">
+        <!-- Dashboard -->
+        <li>
+          <a href="{% url 'home' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+            <div class="flex h-6 w-6 items-center justify-center">
+              <i data-lucide="layout-dashboard" class="h-4 w-4"></i>
+            </div>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        
+        <!-- Surveys -->
+        <li>
+          <a href="{% url 'survey_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+            <div class="flex h-6 w-6 items-center justify-center">
+              <i data-lucide="list" class="h-4 w-4"></i>
+            </div>
+            <span>Pesquisas</span>
+          </a>
+        </li>
+
+        <!-- Preview -->
+        <li>
+          <a href="{% url 'survey_preview_start' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+            <div class="flex h-6 w-6 items-center justify-center">
+              <i data-lucide="eye" class="h-4 w-4"></i>
+            </div>
+            <span>Preview</span>
+          </a>
+        </li>
+
+        <!-- Companies -->
+        <li class="relative">
+          <button type="button" class="company-menu-toggle group flex w-full items-center justify-between space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+            <div class="flex items-center space-x-3">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="building-2" class="h-4 w-4"></i>
+              </div>
+              <span>Empresas</span>
+            </div>
+            <i data-lucide="chevron-down" class="company-chevron h-4 w-4 transition-transform duration-200"></i>
+          </button>
+          
+          <!-- Submenu -->
+          <ul class="company-submenu hidden mt-1 ml-9 space-y-1">
+            <li>
+              <a href="{% url 'company_list' %}" class="block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+                Todas as Empresas
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'company_prospects' %}" class="block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+                <span class="inline-flex items-center">
+                  <span class="mr-2 h-2 w-2 rounded-full bg-orange-500"></span>
+                  Prospects
+                </span>
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'company_clients' %}" class="block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+                <span class="inline-flex items-center">
+                  <span class="mr-2 h-2 w-2 rounded-full bg-green-500"></span>
+                  Clientes Operando
+                </span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Answers -->
+        <li>
+          <a href="{% url 'answers_summary' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+            <div class="flex h-6 w-6 items-center justify-center">
+              <i data-lucide="bar-chart-3" class="h-4 w-4"></i>
+            </div>
+            <span>Respostas</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    
+    <!-- Sidebar Footer -->
+    <div class="border-t border-border/40 p-4">
+      {% if user.is_authenticated %}
+      <form action="{% url 'logout' %}" method="post" class="w-full">
+        {% csrf_token %}
+        <button type="submit" class="group flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-destructive hover:text-destructive-foreground">
+          <div class="flex h-6 w-6 items-center justify-center">
+            <i data-lucide="log-out" class="h-4 w-4"></i>
+          </div>
+          <span>Sair</span>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</aside>
+
+<!-- Sidebar overlay for mobile -->
+<div id="sidebar-overlay" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden hidden"></div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarClose = document.getElementById('sidebar-close');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    
+    // Function to open sidebar
+    function openSidebar() {
+      console.log('Opening sidebar'); // Debug
+      sidebar.classList.remove('-translate-x-full');
+      if (sidebarOverlay) {
+        sidebarOverlay.classList.remove('hidden');
+      }
+    }
+    
+    // Function to close sidebar
+    function closeSidebar() {
+      console.log('Closing sidebar'); // Debug
+      sidebar.classList.add('-translate-x-full');
+      if (sidebarOverlay) {
+        sidebarOverlay.classList.add('hidden');
+      }
+    }
+    
+    // Toggle sidebar for mobile
+    if (mobileMenuToggle) {
+      mobileMenuToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('Mobile menu toggle clicked'); // Debug
+        if (sidebar.classList.contains('-translate-x-full')) {
+          openSidebar();
+        } else {
+          closeSidebar();
+        }
+      });
+    }
+    
+    // Close sidebar
+    if (sidebarClose) {
+      sidebarClose.addEventListener('click', function(e) {
+        e.preventDefault();
+        closeSidebar();
+      });
+    }
+    
+    // Close sidebar when clicking overlay
+    if (sidebarOverlay) {
+      sidebarOverlay.addEventListener('click', function() {
+        closeSidebar();
+      });
+    }
+    
+    // Highlight active menu item
+    const currentPath = window.location.pathname;
+    const menuLinks = sidebar.querySelectorAll('a');
+    
+    menuLinks.forEach(link => {
+      if (link.getAttribute('href') === currentPath) {
+        link.classList.remove('text-muted-foreground');
+        link.classList.add('bg-accent', 'text-primary', 'font-semibold');
+      }
+    });
+  });
+</script>

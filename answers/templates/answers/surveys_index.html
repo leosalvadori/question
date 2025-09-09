@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load utils_extras %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+	<h1 class="text-xl font-semibold mb-4">Respostas - Pesquisas</h1>
+
+	<form method="get" class="mb-4 flex items-end gap-3">
+		<div>
+			<label class="block text-sm">Empresa</label>
+			<select name="company" class="border rounded p-2 text-black">
+				<option value="">Todas</option>
+				{% for c in companies %}
+				<option value="{{ c.id }}" {% if request.GET.company == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		<div>
+			<label class="block text-sm">Token</label>
+			<input type="text" name="token" value="{{ request.GET.token }}" class="border rounded p-2 text-black" placeholder="Ex.: 2-M58TVW" />
+		</div>
+		<div>
+			<label class="block text-sm">Itens/página</label>
+			<select name="page_size" class="border rounded p-2 text-black">
+				<option value="15" {% if page_obj.paginator.per_page == 15 %}selected{% endif %}>15</option>
+				<option value="30" {% if page_obj.paginator.per_page == 30 %}selected{% endif %}>30</option>
+				<option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50</option>
+			</select>
+		</div>
+		<div>
+			<button class="px-3 py-2 bg-blue-600 text-white rounded">Filtrar</button>
+			<a class="px-3 py-2 bg-gray-200 text-black rounded" href="?">Limpar</a>
+		</div>
+	</form>
+
+	<table class="w-full border bg-white text-black">
+		<thead>
+			<tr class="bg-gray-100 text-left">
+				<th class="p-2 border">Empresa</th>
+				<th class="p-2 border">Pesquisa</th>
+				<th class="p-2 border">Token</th>
+				<th class="p-2 border">Qtd Respostas</th>
+				<th class="p-2 border">Ações</th>
+			</tr>
+		</thead>
+		<tbody>
+		{% for s in surveys %}
+			<tr>
+				<td class="p-2 border">{{ s.company.name }}</td>
+				<td class="p-2 border">{{ s.title }}</td>
+				<td class="p-2 border">{{ s.token }}</td>
+				<td class="p-2 border">{{ count_map|get_item:s.id|default:0 }}</td>
+				<td class="p-2 border">
+					<a href="{% url 'answers_dashboard' s.id %}" class="px-3 py-1 bg-blue-600 text-white rounded">Dashboard</a>
+					<a href="{% url 'answers_detail' s.id %}" class="px-3 py-1 bg-slate-700 text-white rounded">Detalhes</a>
+				</td>
+			</tr>
+		{% empty %}
+			<tr><td colspan="5" class="p-3 text-center text-gray-600">Nenhuma pesquisa encontrada</td></tr>
+		{% endfor %}
+		</tbody>
+	</table>
+
+	{% include 'components/_pagination.html' with page_obj=page_obj extra_query=extra_query %}
+</div>
+{% endblock %}
+
+

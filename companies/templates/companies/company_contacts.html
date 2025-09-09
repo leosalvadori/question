@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Histórico de Contatos - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+	<div>
+		<nav class="text-sm text-muted-foreground mb-2">
+			<a href="{% url 'company_list' %}" class="hover:text-primary">Empresas</a>
+			<span class="mx-2">/</span>
+			<a href="{% url 'company_detail' company.id %}" class="hover:text-primary">{{ company.name }}</a>
+			<span class="mx-2">/</span>
+			<span>Histórico de Contatos</span>
+		</nav>
+		<h1 class="text-2xl font-semibold">Histórico de Contatos</h1>
+		<p class="text-muted-foreground">{{ company.name }}</p>
+	</div>
+	<a href="{% url 'company_contact_create' company.id %}" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">
+		<i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>
+		Novo Contato
+	</a>
+</div>
+
+{% if contacts %}
+<div class="space-y-4">
+	{% for contact in contacts %}
+	<div class="glass-effect rounded-xl border border-border/40 p-6">
+		<div class="flex items-start justify-between">
+			<div class="flex-1">
+				<div class="flex items-center gap-4 mb-3">
+					<h3 class="text-lg font-semibold">{{ contact.contact_date|date:"d/m/Y H:i" }}</h3>
+					{% if contact.created_by %}
+					<span class="text-sm text-muted-foreground">por {{ contact.created_by.get_full_name|default:contact.created_by.username }}</span>
+					{% endif %}
+				</div>
+				<div class="prose prose-sm max-w-none">
+					<p class="whitespace-pre-wrap">{{ contact.notes }}</p>
+				</div>
+				{% if contact.created_at != contact.contact_date %}
+				<p class="text-xs text-muted-foreground mt-3">
+					Registrado em: {{ contact.created_at|date:"d/m/Y H:i" }}
+				</p>
+				{% endif %}
+			</div>
+			<form method="post" action="{% url 'company_contact_delete' company.id contact.id %}" class="ml-4">
+				{% csrf_token %}
+				<button type="submit" onclick="return confirm('Confirma a exclusão deste registro de contato?')" class="text-red-400 hover:text-red-500">
+					<i data-lucide="trash-2" class="w-4 h-4"></i>
+				</button>
+			</form>
+		</div>
+	</div>
+	{% endfor %}
+</div>
+{% else %}
+<div class="glass-effect rounded-xl border border-border/40 p-12 text-center">
+	<i data-lucide="message-circle" class="w-12 h-12 mx-auto mb-4 text-muted-foreground"></i>
+	<p class="text-muted-foreground mb-4">Nenhum contato registrado ainda.</p>
+	<a href="{% url 'company_contact_create' company.id %}" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 inline-flex items-center">
+		<i data-lucide="plus" class="w-4 h-4 mr-2"></i>
+		Registrar Primeiro Contato
+	</a>
+</div>
+{% endif %}
+
+<div class="mt-6">
+	<a href="{% url 'company_detail' company.id %}" class="text-primary hover:underline">← Voltar para detalhes da empresa</a>
+</div>
+{% endblock %}
+

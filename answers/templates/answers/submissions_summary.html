@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% load utils_extras %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+	<h1 class="text-xl font-semibold mb-4">Respostas por Pesquisa</h1>
+
+	<form method="get" class="mb-4 flex items-end gap-3">
+		<div>
+			<label class="block text-sm">Empresa</label>
+			<select name="company" class="border rounded p-2 text-black">
+				<option value="">Todas</option>
+				{% for c in companies %}
+				<option value="{{ c.id }}" {% if request.GET.company == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		<div>
+			<label class="block text-sm">De</label>
+			<input type="date" name="from" value="{{ request.GET.from }}" class="border rounded p-2 text-black">
+		</div>
+		<div>
+			<label class="block text-sm">Até</label>
+			<input type="date" name="to" value="{{ request.GET.to }}" class="border rounded p-2 text-black">
+		</div>
+		<div>
+			<label class="block text-sm">Itens/página</label>
+			<select name="page_size" class="border rounded p-2 text-black">
+				<option value="15" {% if page_obj.paginator.per_page == 15 %}selected{% endif %}>15</option>
+				<option value="30" {% if page_obj.paginator.per_page == 30 %}selected{% endif %}>30</option>
+				<option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50</option>
+			</select>
+		</div>
+		<div class="flex gap-2">
+			<button class="px-3 py-2 bg-blue-600 text-white rounded">Filtrar</button>
+			<a class="px-3 py-2 bg-gray-200 rounded" href="?">Limpar</a>
+		</div>
+	</form>
+	<table class="w-full border bg-white text-black">
+		<thead>
+			<tr class="bg-gray-100 text-left">
+				<th class="p-2 border">Empresa</th>
+				<th class="p-2 border">Pesquisa (Token)</th>
+				<th class="p-2 border">Qtd Respostas</th>
+				<th class="p-2 border">Ações</th>
+			</tr>
+		</thead>
+		<tbody>
+		{% for s in summaries %}
+			<tr>
+				<td class="p-2 border">{{ s.company.name }}</td>
+				<td class="p-2 border">
+					<a class="text-blue-600 underline" href="{% url 'survey_detail' s.survey.id %}">{{ s.survey.title }}</a>
+					<span class="text-gray-600">({{ s.survey_token }})</span>
+				</td>
+				<td class="p-2 border">{{ s.total }}</td>
+				<td class="p-2 border">
+					<a href="{% url 'answers_detail' s.survey.id %}" class="px-3 py-1 bg-blue-600 text-white rounded">Ver</a>
+				</td>
+			</tr>
+		{% empty %}
+			<tr><td colspan="4" class="p-3 text-center text-gray-600">Sem submissões</td></tr>
+		{% endfor %}
+		</tbody>
+	</table>
+	{% include 'components/_pagination.html' with page_obj=page_obj extra_query=extra_query %}
+</div>
+{% endblock %}
+
+

@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+	<h1 class="text-xl font-semibold mb-2">{{ survey.title }}</h1>
+	<p class="text-sm text-gray-600 mb-6">{{ survey.description }}</p>
+
+	{% if errors %}
+	<div class="p-3 mb-4 bg-red-100 text-red-800 rounded">
+		<strong>Erros ao enviar:</strong>
+		<pre class="whitespace-pre-wrap">{{ errors|safe }}</pre>
+	</div>
+	{% endif %}
+
+	<form method="post">
+		{% csrf_token %}
+		<input type="hidden" name="occurred_at" id="occurred_at" />
+		<input type="hidden" name="latitude" id="latitude" />
+		<input type="hidden" name="longitude" id="longitude" />
+
+		{% for q in survey.questions.all %}
+		<div class="mb-6">
+			<label class="block font-medium mb-2">{{ forloop.counter }}. {{ q.question_text }}</label>
+			{% if q.question_type == 'multiple_choice' %}
+				<div class="space-y-2">
+					{% for opt in q.options.all %}
+					<label class="flex items-center space-x-2">
+						<input type="checkbox" name="question_{{ q.id }}" value="{{ opt.id }}">
+						<span>{{ opt.option_text }}</span>
+					</label>
+					{% empty %}
+					<p class="text-sm text-gray-500">Sem opções cadastradas.</p>
+					{% endfor %}
+				</div>
+			{% elif q.question_type == 'single_choice' %}
+				<div class="space-y-2">
+					{% for opt in q.options.all %}
+					<label class="flex items-center space-x-2">
+						<input type="radio" name="question_{{ q.id }}" value="{{ opt.id }}">
+						<span>{{ opt.option_text }}</span>
+					</label>
+					{% empty %}
+					<p class="text-sm text-gray-500">Sem opções cadastradas.</p>
+					{% endfor %}
+				</div>
+			{% else %}
+				<textarea name="text_{{ q.id }}" rows="3" class="w-full border rounded p-2 text-black"></textarea>
+			{% endif %}
+		</div>
+		{% endfor %}
+
+		<div class="flex items-center space-x-2">
+			<a href="{% url 'survey_preview_start' %}" class="px-4 py-2 bg-gray-200 text-black rounded">Voltar</a>
+			<button class="px-4 py-2 bg-green-600 text-white rounded">Enviar</button>
+		</div>
+	</form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+	// Set occurred_at to now in ISO if empty
+	const occurredAt = document.getElementById('occurred_at');
+	if (occurredAt && !occurredAt.value) {
+		occurredAt.value = new Date().toISOString().slice(0,19);
+	}
+	// Try geolocation (optional)
+	if (navigator.geolocation) {
+		navigator.geolocation.getCurrentPosition((pos) => {
+			const lat = document.getElementById('latitude');
+			const lon = document.getElementById('longitude');
+			if (lat && lon) {
+				lat.value = pos.coords.latitude.toFixed(6);
+				lon.value = pos.coords.longitude.toFixed(6);
+			}
+		});
+	}
+});
+</script>
+{% endblock %}
+
+

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Token criado - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto glass-effect p-6 rounded-xl border border-border/40">
+	<h1 class="text-xl font-semibold mb-4">Token gerado</h1>
+	<p class="text-sm text-muted-foreground mb-4">Copie seus tokens com segurança. O refresh token será mostrado apenas uma vez.</p>
+
+	<div class="mb-4">
+		<label class="text-sm text-muted-foreground">Access Token</label>
+		<div class="flex items-center gap-2">
+			<input type="text" readonly value="{{ access_token }}" class="flex-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" />
+			<button type="button" class="copy-btn px-3 py-2 border border-border rounded hover:bg-accent" data-value="{{ access_token }}">Copiar</button>
+		</div>
+	</div>
+
+	<div>
+		<label class="text-sm text-muted-foreground">Refresh Token</label>
+		<div class="flex items-center gap-2">
+			<input type="text" readonly value="{{ refresh_token }}" class="flex-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" />
+			<button type="button" class="copy-btn px-3 py-2 border border-border rounded hover:bg-accent" data-value="{{ refresh_token }}">Copiar</button>
+		</div>
+	</div>
+
+	<div class="mt-6">
+		<a href="{% url 'company_tokens' company.id %}" class="px-4 py-2 rounded border border-border hover:bg-accent">Voltar</a>
+	</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	document.querySelectorAll('.copy-btn').forEach(btn => {
+		btn.addEventListener('click', async function() {
+			const val = this.getAttribute('data-value');
+			try {
+				await navigator.clipboard.writeText(val);
+				alert('Copiado');
+			} catch(e) { alert('Falha ao copiar'); }
+		});
+	});
+});
+</script>
+{% endblock %}
+

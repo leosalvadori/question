@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Novo Contato - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+	<nav class="text-sm text-muted-foreground mb-2">
+		<a href="{% url 'company_list' %}" class="hover:text-primary">Empresas</a>
+		<span class="mx-2">/</span>
+		<a href="{% url 'company_detail' company.id %}" class="hover:text-primary">{{ company.name }}</a>
+		<span class="mx-2">/</span>
+		<a href="{% url 'company_contacts' company.id %}" class="hover:text-primary">Histórico de Contatos</a>
+		<span class="mx-2">/</span>
+		<span>Novo Contato</span>
+	</nav>
+	<h1 class="text-2xl font-semibold">Registrar Novo Contato</h1>
+	<p class="text-muted-foreground">{{ company.name }}</p>
+</div>
+
+<form method="post" class="space-y-6 glass-effect p-6 rounded-xl border border-border/40 max-w-2xl">
+	{% csrf_token %}
+	
+	<div>
+		<label class="block text-sm font-medium mb-1" for="contact_date">Data e Hora do Contato</label>
+		<input 
+			type="datetime-local" 
+			name="contact_date" 
+			id="contact_date"
+			value="{{ now|date:'Y-m-d\TH:i' }}"
+			class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
+		>
+		<p class="mt-1 text-xs text-muted-foreground">Deixe em branco para usar a data/hora atual</p>
+	</div>
+	
+	<div>
+		<label class="block text-sm font-medium mb-1" for="notes">Observações sobre o Contato *</label>
+		<textarea 
+			name="notes" 
+			id="notes"
+			rows="6"
+			required
+			placeholder="Descreva o que foi conversado, próximos passos, impressões, etc..."
+			class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
+		></textarea>
+	</div>
+	
+	<div class="flex gap-3">
+		<button type="submit" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">
+			Salvar Contato
+		</button>
+		<a href="{% url 'company_contacts' company.id %}" class="px-4 py-2 border border-border rounded-lg hover:bg-accent">
+			Cancelar
+		</a>
+	</div>
+</form>
+
+<script>
+// Set current datetime as default
+document.addEventListener('DOMContentLoaded', function() {
+	const dateInput = document.getElementById('contact_date');
+	if (!dateInput.value) {
+		const now = new Date();
+		// Format as YYYY-MM-DDTHH:MM for datetime-local input
+		const year = now.getFullYear();
+		const month = String(now.getMonth() + 1).padStart(2, '0');
+		const day = String(now.getDate()).padStart(2, '0');
+		const hours = String(now.getHours()).padStart(2, '0');
+		const minutes = String(now.getMinutes()).padStart(2, '0');
+		dateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+	}
+});
+</script>
+{% endblock %}
+

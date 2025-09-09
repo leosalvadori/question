@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block content %}
+<style>
+  #heatmap {
+    min-height: 400px;
+    background-color: #f0f0f0;
+  }
+  #heatmap-img {
+    display: none;
+  }
+  @media print {
+    #heatmap {
+      display: none !important;
+    }
+    #heatmap-img {
+      display: block !important;
+    }
+    .print-only {
+      display: block !important;
+    }
+  }
+</style>
+<div class="max-w-6xl mx-auto">
+	<div class="flex items-center justify-between mb-4">
+		<div>
+			<h1 class="text-2xl font-semibold">{{ survey.title }}</h1>
+			<p class="text-sm text-muted-foreground">Empresa: {{ survey.company.name }} | Token: {{ survey.token }}</p>
+		</div>
+		<div class="space-x-2 no-print">
+			<a href="{% url 'answers_detail' survey.id %}" class="px-3 py-2 bg-slate-700 text-white rounded">Detalhes</a>
+			<a href="?format=csv" class="px-3 py-2 bg-emerald-600 text-white rounded">Exportar CSV</a>
+			<a href="?format=json" class="px-3 py-2 bg-blue-600 text-white rounded">Exportar JSON</a>
+			<button id="btn-print" class="px-3 py-2 bg-purple-600 text-white rounded">Imprimir PDF</button>
+		</div>
+	</div>
+
+	<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+		<div class="p-6 rounded-xl glass-effect border border-border/40">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="text-sm text-muted-foreground">Total de Respostas</p>
+					<p class="text-3xl font-bold">{{ total_submissions }}</p>
+				</div>
+				<i data-lucide="bar-chart-3" class="h-8 w-8 text-primary"></i>
+			</div>
+		</div>
+		<div class="p-6 rounded-xl glass-effect border border-border/40">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="text-sm text-muted-foreground">Última Resposta</p>
+					<p class="text-3xl font-bold">{{ last_submission.submitted_at|default:'—' }}</p>
+				</div>
+				<i data-lucide="clock" class="h-8 w-8 text-primary"></i>
+			</div>
+		</div>
+		<div></div>
+	</div>
+
+	{% if geo_points %}
+	<div class="mb-8 p-6 rounded-xl glass-effect border border-border/40">
+		<h2 class="text-xl font-semibold mb-4">Mapa de Calor - Localização das Respostas</h2>
+		<div id="heatmap" class="w-full h-96 rounded-lg overflow-hidden no-print"></div>
+		<img id="heatmap-img" class="print-only hidden w-full h-96 object-contain" alt="Mapa de Calor" />
+	</div>
+	{% endif %}
+
+	<div class="space-y-4">
+		{% for dist in distributions %}
+		<div class="p-6 rounded-xl glass-effect border border-border/40">
+			<p class="font-medium mb-2">{{ forloop.counter }}. {{ dist.question.question_text }}</p>
+			<div class="h-60">
+				<canvas class="chart-canvas no-print" id="chart_{{ dist.question.id }}"></canvas>
+				<img class="print-chart print-only" id="chart_img_{{ dist.question.id }}" alt="Gráfico {{ dist.question.id }}" style="display: none; width: 100%; height: 100%; object-fit: contain;" />
+			</div>
+		</div>
+		{% endfor %}
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% if geo_points %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+{% endif %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  {% if geo_points %}
+  // Initialize heatmap
+  const mapElement = document.getElementById('heatmap');
+  if (mapElement) {
+    // Pass geo points data directly from Django template
+    const geoPointsData = [
+      {% for point in geo_points %}
+      {
+        lat: {{ point.lat|safe }},
+        lng: {{ point.lng|safe }},
+        intensity: {{ point.intensity|safe }}
+      }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+    
+    // Center map on Brazil
+    const map = L.map('heatmap').setView([-15.7801, -47.9292], 4);
+    
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 18
+    }).addTo(map);
+    
+    // Prepare heatmap data - check if point has valid coordinates
+    const heatData = [];
+    geoPointsData.forEach(point => {
+      if (point && point.lat !== null && point.lng !== null) {
+        heatData.push([point.lat, point.lng, point.intensity || 1.0]);
+      }
+    });
+    
+    // Create heatmap layer with high intensity for few points
+    if (heatData.length > 0) {
+      const heat = L.heatLayer(heatData, {
+        radius: 10,     // Increased radius for better visibility at all zoom levels
+        blur: 5,       // Increased blur for better spread
+        maxZoom: 6,     // Even lower maxZoom - points stay visible when zoomed out
+        max: 0.3,       // Lower max value to increase relative intensity
+        minOpacity: 0.4, // Minimum opacity so points never fully disappear
+        gradient: {
+          0.0: 'blue',
+          0.25: 'cyan',
+          0.5: 'lime',
+          0.65: 'yellow',
+          0.85: 'orange',
+          1.0: 'red'
+        }
+      }).addTo(map);
+      
+      // Add circle markers as fallback for zoom out levels
+      const markerGroup = L.layerGroup();
+      heatData.forEach(point => {
+        L.circleMarker([point[0], point[1]], {
+          radius: 8,
+          fillColor: '#ff7800',
+          color: '#000',
+          weight: 1,
+          opacity: 0.8,
+          fillOpacity: 0.6
+        }).addTo(markerGroup);
+      });
+      
+      // Show/hide markers based on zoom level
+      map.on('zoomend', function() {
+        const currentZoom = map.getZoom();
+        if (currentZoom < 6) {
+          // Show markers when zoomed out
+          if (!map.hasLayer(markerGroup)) {
+            markerGroup.addTo(map);
+          }
+        } else {
+          // Hide markers when zoomed in (heatmap is visible)
+          if (map.hasLayer(markerGroup)) {
+            map.removeLayer(markerGroup);
+          }
+        }
+      });
+      
+      // Fit map bounds to show all points with some padding
+      if (heatData.length > 1) {
+        const bounds = L.latLngBounds(heatData.map(d => [d[0], d[1]]));
+        map.fitBounds(bounds, { padding: [50, 50] });
+      } else if (heatData.length === 1) {
+        // If only one point, center on it with reasonable zoom
+        map.setView([heatData[0][0], heatData[0][1]], 10);
+      }
+      
+      // Trigger initial check for markers
+      map.fire('zoomend');
+      
+      // Store map instance for print functionality
+      window.__heatmap = map;
+    }
+  }
+  {% endif %}
+
+  {% for dist in distributions %}
+    (function(){
+      const ctx = document.getElementById('chart_{{ dist.question.id }}').getContext('2d');
+      const labels = [{% for o in dist.options %}'{{ o.selected_option__option_text|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+      const data = [{% for o in dist.options %}{{ o.total }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Respostas',
+            data: data,
+            backgroundColor: 'rgba(59, 130, 246, 0.6)',
+            borderColor: 'rgba(37, 99, 235, 1)',
+            borderWidth: 1,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } }
+          },
+          plugins: {
+            legend: { display: false },
+            title: { display: false }
+          }
+        }
+      });
+
+      // Store chart instance for print
+      window.__charts = window.__charts || {};
+      window.__charts['{{ dist.question.id }}'] = chart;
+    })();
+  {% endfor %}
+
+  const waitForImagesToLoad = (images) => {
+    return new Promise((resolve) => {
+      let remaining = images.length;
+      if (remaining === 0) return resolve();
+      images.forEach((img) => {
+        if (img.complete && img.naturalWidth) {
+          remaining -= 1;
+          if (remaining === 0) resolve();
+        } else {
+          img.addEventListener('load', () => {
+            remaining -= 1;
+            if (remaining === 0) resolve();
+          });
+          img.addEventListener('error', () => {
+            remaining -= 1;
+            if (remaining === 0) resolve();
+          });
+        }
+      });
+    });
+  };
+
+  const printBtn = document.getElementById('btn-print');
+  if (printBtn) {
+    printBtn.addEventListener('click', async function() {
+      // Convert canvases to images for printing
+      const canvases = document.querySelectorAll('canvas.chart-canvas');
+      canvases.forEach(function(cv){
+        try {
+          const img = document.getElementById('chart_img_' + cv.id.replace('chart_', ''));
+          if (img) {
+            img.src = cv.toDataURL('image/png');
+          }
+        } catch (e) {}
+      });
+      
+      // Capture heatmap for printing
+      {% if geo_points %}
+      try {
+        const heatmapDiv = document.getElementById('heatmap');
+        const heatmapImg = document.getElementById('heatmap-img');
+        
+        if (heatmapDiv && heatmapImg && window.__heatmap) {
+          // Force map to redraw
+          window.__heatmap.invalidateSize();
+          
+          // Wait a bit for map to fully render
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Capture the map using html2canvas
+          const canvas = await html2canvas(heatmapDiv, {
+            allowTaint: true,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#f0f0f0'
+          });
+          
+          // Convert to image
+          heatmapImg.src = canvas.toDataURL('image/png');
+        }
+      } catch (e) {
+        console.error('Error capturing heatmap:', e);
+      }
+      {% endif %}
+      
+      const images = Array.from(document.querySelectorAll('img.print-chart, #heatmap-img'));
+      await waitForImagesToLoad(images);
+      window.print();
+    });
+  }
+});
+</script>
+{% endblock %}
+
+

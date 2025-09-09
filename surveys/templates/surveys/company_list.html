@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if page_title %}{{ page_title }}{% else %}Empresas{% endif %}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+	<h1 class="text-2xl font-semibold flex items-center gap-3">
+		{% if filter_type == 'prospects' %}
+			<span class="inline-flex items-center">
+				<span class="mr-2 h-3 w-3 rounded-full bg-orange-500"></span>
+				{{ page_title }}
+			</span>
+		{% elif filter_type == 'clients' %}
+			<span class="inline-flex items-center">
+				<span class="mr-2 h-3 w-3 rounded-full bg-green-500"></span>
+				{{ page_title }}
+			</span>
+		{% else %}
+			Empresas
+		{% endif %}
+	</h1>
+	<div class="flex items-center gap-3">
+		{% include 'components/_page_size.html' with current_page_size=page_size %}
+		<a href="{% url 'company_create' %}" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">Nova Empresa</a>
+	</div>
+</div>
+
+<!-- Filters -->
+<div class="mb-6 glass-effect rounded-xl border border-border/40 p-4">
+	<form method="get" class="flex flex-wrap gap-4">
+		{% if not filter_type %}
+		<div>
+			<label class="block text-sm font-medium mb-1">Tipo de Empresa</label>
+			<select name="company_type" class="px-3 py-2 rounded-lg border border-border/40 bg-background">
+				<option value="">Todos</option>
+				{% for value, label in company_types %}
+				<option value="{{ value }}" {% if company_type == value %}selected{% endif %}>{{ label }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		{% endif %}
+		
+		<div>
+			<label class="block text-sm font-medium mb-1">Status do Contrato</label>
+			<select name="is_active" class="px-3 py-2 rounded-lg border border-border/40 bg-background">
+				<option value="">Todos</option>
+				<option value="true" {% if is_active == 'true' %}selected{% endif %}>Ativo</option>
+				<option value="false" {% if is_active == 'false' %}selected{% endif %}>Inativo</option>
+			</select>
+		</div>
+		
+		<div>
+			<label class="block text-sm font-medium mb-1">Status de Pagamento</label>
+			<select name="payment_status" class="px-3 py-2 rounded-lg border border-border/40 bg-background">
+				<option value="">Todos</option>
+				{% for value, label in payment_statuses %}
+				<option value="{{ value }}" {% if payment_status == value %}selected{% endif %}>{{ label }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		
+		<div class="flex items-end gap-2">
+			<button type="submit" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">
+				Filtrar
+			</button>
+			<a href="{% url 'company_list' %}" class="px-4 py-2 border border-border/40 rounded-lg hover:bg-muted">
+				Limpar
+			</a>
+		</div>
+	</form>
+</div>
+
+<div class="glass-effect rounded-xl border border-border/40 overflow-hidden">
+	<table class="min-w-full">
+		<thead class="text-left text-sm text-muted-foreground border-b border-border/40">
+			<tr>
+				<th class="py-3 px-4">Nome</th>
+				<th class="py-3 px-4">Responsável</th>
+				<th class="py-3 px-4">Telefone</th>
+				<th class="py-3 px-4">Tipo</th>
+				<th class="py-3 px-4">Contrato</th>
+				<th class="py-3 px-4">Pagamento</th>
+				<th class="py-3 px-4"></th>
+			</tr>
+		</thead>
+		<tbody class="divide-y divide-border/40">
+			{% for company in companies %}
+			<tr>
+				<td class="py-3 px-4 font-medium">
+					{{ company.name }}
+					{% if filter_type == 'prospects' and company.contact_count == 0 %}
+						<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+							Sem contato
+						</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4 text-sm">{{ company.responsible_person|default:"-" }}</td>
+				<td class="py-3 px-4 text-sm">{{ company.phone|default:"-" }}</td>
+				<td class="py-3 px-4">
+					{% if company.company_type == 'prospect' %}
+						<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+							{{ company.get_company_type_display }}
+						</span>
+					{% else %}
+						<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+							{{ company.get_company_type_display }}
+						</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4">
+					{% if company.is_active %}
+						<span class="text-green-600">✓ Ativo</span>
+					{% else %}
+						<span class="text-red-600">✗ Inativo</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4">
+					{% if company.payment_status == 'active' %}
+						<span class="text-green-600">{{ company.get_payment_status_display }}</span>
+					{% elif company.payment_status == 'overdue' %}
+						<span class="text-orange-600">{{ company.get_payment_status_display }}</span>
+					{% else %}
+						<span class="text-red-600">{{ company.get_payment_status_display }}</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4 text-right space-x-3">
+					<a href="{% url 'company_detail' company.id %}" class="text-primary hover:underline">Ver</a>
+					<a href="{% url 'company_update' company.id %}" class="text-blue-400 hover:underline">Editar</a>
+					{% if company.company_type == 'prospect' %}
+					<a href="{% url 'company_contacts' company.id %}" class="text-purple-400 hover:underline">Contatos</a>
+					{% endif %}
+					<a href="{% url 'company_tokens' company.id %}" class="text-emerald-400 hover:underline">Tokens</a>
+					<a href="{% url 'company_delete' company.id %}" class="text-red-400 hover:underline">Excluir</a>
+				</td>
+			</tr>
+			{% empty %}
+			<tr>
+				<td colspan="7" class="py-6 px-4 text-center text-muted-foreground">Nenhuma empresa cadastrada.</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% include 'components/_pagination.html' with page_obj=page_obj %}
+{% endblock %}
+

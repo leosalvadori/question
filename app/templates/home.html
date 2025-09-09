@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Pesquisas - Dashboard
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+        Dashboard de Pesquisas
+      </h1>
+      <p class="text-muted-foreground mt-2">Visão geral das suas empresas e pesquisas</p>
+    </div>
+    <div class="flex items-center space-x-2">
+      <div class="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+      <span class="text-sm text-muted-foreground">Sistema Online</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  <div class="p-6 rounded-xl glass-effect border border-border/40">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-muted-foreground">Empresas</p>
+        <p class="text-3xl font-bold">{{ companies_count }}</p>
+      </div>
+      <i data-lucide="building-2" class="h-8 w-8 text-primary"></i>
+    </div>
+  </div>
+  <div class="p-6 rounded-xl glass-effect border border-border/40">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-muted-foreground">Pesquisas</p>
+        <p class="text-3xl font-bold">{{ surveys_count }}</p>
+      </div>
+      <i data-lucide="list" class="h-8 w-8 text-primary"></i>
+    </div>
+  </div>
+  <a href="{% url 'survey_create' %}" class="p-6 rounded-xl glass-effect border border-border/40 hover:bg-accent transition-colors">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-muted-foreground">Criar</p>
+        <p class="text-3xl font-bold">Nova Pesquisa</p>
+      </div>
+      <i data-lucide="plus-circle" class="h-8 w-8 text-primary"></i>
+    </div>
+  </a>
+  
+  
+</div>
+
+<div class="p-6 rounded-xl glass-effect border border-border/40">
+  <div class="flex items-center space-x-2 mb-6">
+    <div class="h-6 w-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded flex items-center justify-center">
+      <i data-lucide="clock" class="h-4 w-4 text-white"></i>
+    </div>
+    <h2 class="text-xl font-semibold">Pesquisas Recentes</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-border/40">
+      <thead>
+        <tr class="text-left text-sm text-muted-foreground">
+          <th class="py-2 pr-4">Título</th>
+          <th class="py-2 pr-4">Empresa</th>
+          <th class="py-2 pr-4">Criado em</th>
+          <th class="py-2"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border/40">
+        {% for survey in recent_surveys %}
+        <tr>
+          <td class="py-3 pr-4 font-medium">{{ survey.title }}</td>
+          <td class="py-3 pr-4">{{ survey.company.name }}</td>
+          <td class="py-3 pr-4">{{ survey.created_at }}</td>
+          <td class="py-3">
+            <a href="{% url 'survey_detail' survey.id %}" class="text-primary hover:underline">Ver</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="py-6 text-center text-muted-foreground">Nenhuma pesquisa criada ainda.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

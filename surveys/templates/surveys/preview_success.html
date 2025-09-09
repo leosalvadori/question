@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+	<h1 class="text-xl font-semibold mb-2">Obrigado!</h1>
+	<p class="mb-4">Sua resposta foi registrada com sucesso.</p>
+	<div class="space-x-2">
+		<a href="{% url 'survey_preview' token=token %}" class="px-4 py-2 bg-blue-600 text-white rounded">Responder novamente</a>
+		<a href="{% url 'survey_preview_start' %}" class="px-4 py-2 bg-gray-200 rounded">Nova pesquisa</a>
+	</div>
+</div>
+{% endblock %}
+
+

@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Empresa{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-6">{% if company %}Editar Empresa{% else %}Nova Empresa{% endif %}</h1>
+
+<form method="post">
+	{% csrf_token %}
+	
+	<!-- Informações Básicas -->
+	<div class="space-y-6 glass-effect p-6 rounded-xl border border-border/40 mb-6">
+		<h2 class="text-lg font-semibold">Informações Básicas</h2>
+		
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_name">{{ form.name.label }}</label>
+				{{ form.name }}
+				{% if form.name.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.name.help_text }}</p>{% endif %}
+				{% for error in form.name.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_responsible_person">{{ form.responsible_person.label }}</label>
+				{{ form.responsible_person }}
+				{% if form.responsible_person.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.responsible_person.help_text }}</p>{% endif %}
+				{% for error in form.responsible_person.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_phone">{{ form.phone.label }}</label>
+				{{ form.phone }}
+				{% if form.phone.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.phone.help_text }}</p>{% endif %}
+				{% for error in form.phone.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_company_type">{{ form.company_type.label }}</label>
+				{{ form.company_type }}
+				{% if form.company_type.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.company_type.help_text }}</p>{% endif %}
+				{% for error in form.company_type.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+		</div>
+	</div>
+	
+	<!-- Documentos -->
+	<div class="space-y-6 glass-effect p-6 rounded-xl border border-border/40 mb-6">
+		<h2 class="text-lg font-semibold">Documentos</h2>
+		
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_cnpj">{{ form.cnpj.label }}</label>
+				{{ form.cnpj }}
+				{% if form.cnpj.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.cnpj.help_text }}</p>{% endif %}
+				{% for error in form.cnpj.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_cpf">{{ form.cpf.label }}</label>
+				{{ form.cpf }}
+				{% if form.cpf.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.cpf.help_text }}</p>{% endif %}
+				{% for error in form.cpf.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+		</div>
+	</div>
+	
+	<!-- Endereço -->
+	<div class="space-y-6 glass-effect p-6 rounded-xl border border-border/40 mb-6">
+		<h2 class="text-lg font-semibold">Endereço</h2>
+		
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div class="md:col-span-2">
+				<label class="block text-sm font-medium mb-1" for="id_street">{{ form.street.label }}</label>
+				{{ form.street }}
+				{% if form.street.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.street.help_text }}</p>{% endif %}
+				{% for error in form.street.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_number">{{ form.number.label }}</label>
+				{{ form.number }}
+				{% if form.number.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.number.help_text }}</p>{% endif %}
+				{% for error in form.number.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_complement">{{ form.complement.label }}</label>
+				{{ form.complement }}
+				{% if form.complement.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.complement.help_text }}</p>{% endif %}
+				{% for error in form.complement.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_neighborhood">{{ form.neighborhood.label }}</label>
+				{{ form.neighborhood }}
+				{% if form.neighborhood.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.neighborhood.help_text }}</p>{% endif %}
+				{% for error in form.neighborhood.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_city">{{ form.city.label }}</label>
+				{{ form.city }}
+				{% if form.city.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.city.help_text }}</p>{% endif %}
+				{% for error in form.city.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_state">{{ form.state.label }}</label>
+				{{ form.state }}
+				{% if form.state.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.state.help_text }}</p>{% endif %}
+				{% for error in form.state.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_postal_code">{{ form.postal_code.label }}</label>
+				{{ form.postal_code }}
+				{% if form.postal_code.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.postal_code.help_text }}</p>{% endif %}
+				{% for error in form.postal_code.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+		</div>
+	</div>
+	
+	<!-- Status -->
+	<div class="space-y-6 glass-effect p-6 rounded-xl border border-border/40 mb-6">
+		<h2 class="text-lg font-semibold">Status</h2>
+		
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_is_active">
+					<div class="flex items-center">
+						{{ form.is_active }} 
+						<span class="ml-2">{{ form.is_active.label }}</span>
+					</div>
+				</label>
+				{% if form.is_active.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.is_active.help_text }}</p>{% endif %}
+				{% for error in form.is_active.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+			
+			<div>
+				<label class="block text-sm font-medium mb-1" for="id_payment_status">{{ form.payment_status.label }}</label>
+				{{ form.payment_status }}
+				{% if form.payment_status.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.payment_status.help_text }}</p>{% endif %}
+				{% for error in form.payment_status.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+			</div>
+		</div>
+		
+		<div>
+			<label class="block text-sm font-medium mb-1" for="id_notes">{{ form.notes.label }}</label>
+			{{ form.notes }}
+			{% if form.notes.help_text %}<p class="mt-1 text-xs text-muted-foreground">{{ form.notes.help_text }}</p>{% endif %}
+			{% for error in form.notes.errors %}<p class="mt-1 text-xs text-destructive">{{ error }}</p>{% endfor %}
+		</div>
+	</div>
+	
+	<div class="flex gap-3">
+		<button type="submit" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">Salvar</button>
+		<a href="{% url 'company_list' %}" class="px-4 py-2 border border-border rounded-lg hover:bg-accent">Cancelar</a>
+	</div>
+</form>
+
+{% if company %}
+<div class="mt-6">
+	<a href="{% url 'company_tokens' company.id %}" class="inline-flex items-center px-4 py-2 rounded-lg border border-border hover:bg-accent">
+		<i data-lucide="key" class="w-4 h-4 mr-2"></i>
+		Gerenciar Tokens JWT
+	</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/masks.js"></script>
+{% endblock %}
+

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load utils_extras %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+	<h1 class="text-xl font-semibold mb-1">{{ survey.title }}</h1>
+	<p class="text-sm text-slate-300 mb-4">Empresa: {{ survey.company.name }} | Token: {{ survey.token }}</p>
+
+	<div class="flex items-end gap-3 mb-4">
+		<a href="{% url 'answers_summary' %}" class="px-3 py-1 bg-white text-slate-900 rounded">Voltar</a>
+		<form method="get" class="flex items-center gap-2">
+			<label class="text-sm text-slate-300">Itens/página</label>
+			<select name="page_size" class="border rounded p-1 text-black">
+				<option value="15" {% if page_obj.paginator.per_page == 15 %}selected{% endif %}>15</option>
+				<option value="30" {% if page_obj.paginator.per_page == 30 %}selected{% endif %}>30</option>
+				<option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50</option>
+			</select>
+			<input type="hidden" name="from" value="{{ request.GET.from }}" />
+			<input type="hidden" name="to" value="{{ request.GET.to }}" />
+			<button class="px-3 py-1 bg-blue-600 text-white rounded">Aplicar</button>
+		</form>
+	</div>
+
+	<form id="bulkForm" method="post" action="">
+		{% csrf_token %}
+		<input type="hidden" name="action" value="bulk_delete" />
+		<input type="hidden" name="from" value="{{ request.GET.from }}" />
+		<input type="hidden" name="to" value="{{ request.GET.to }}" />
+		<input type="hidden" name="page" value="{{ request.GET.page }}" />
+		<input type="hidden" name="page_size" value="{{ request.GET.page_size }}" />
+		<button onclick="return confirm('Excluir respostas selecionadas?');" class="mb-3 px-3 py-1 bg-red-700 text-white rounded text-sm">Excluir Selecionadas</button>
+
+		{% for sub in submissions %}
+		<div class="mb-6 border rounded">
+			<div class="p-2 bg-slate-800 text-sm text-slate-100 flex justify-between items-center">
+				<div class="flex items-center gap-2">
+					<input type="checkbox" name="selected_ids" value="{{ sub.id }}" class="w-4 h-4">
+					<strong>Submission #{{ sub.id }}</strong> — {{ sub.submitted_at }}
+				</div>
+				<div class="flex items-center gap-2">
+					<span>IP: {{ sub.ip_address }} | Lat: {{ sub.latitude }} | Lon: {{ sub.longitude }}</span>
+					<form method="post" action="{% url 'answers_delete_submission' survey.id sub.id %}" onsubmit="return confirm('Excluir esta resposta?');">
+						{% csrf_token %}
+						<input type="hidden" name="from" value="{{ request.GET.from }}" />
+						<input type="hidden" name="to" value="{{ request.GET.to }}" />
+						<input type="hidden" name="page" value="{{ request.GET.page }}" />
+						<input type="hidden" name="page_size" value="{{ request.GET.page_size }}" />
+						<button class="px-2 py-1 bg-red-600 text-white rounded text-xs">Excluir</button>
+					</form>
+				</div>
+			</div>
+			<div class="p-3">
+				<ol class="space-y-3">
+				{% for q in questions %}
+					<li>
+						<div class="font-medium">{{ forloop.counter }}. {{ q.question_text }}</div>
+						<div class="text-sm text-slate-100">
+							{% with list=answers_by_submission|get_item:sub.id %}
+								{% if list %}
+									{% for a in list %}
+										{% if a.question_id == q.id %}
+											{% if a.selected_option %}
+												- {{ a.selected_option.option_text }}
+											{% elif a.text_response %}
+												- {{ a.text_response }}
+											{% endif %}
+										{% endif %}
+									{% endfor %}
+								{% else %}
+									<em class="text-slate-300">Sem respostas</em>
+								{% endif %}
+							{% endwith %}
+						</div>
+					</li>
+				{% endfor %}
+				</ol>
+			</div>
+		</div>
+		{% empty %}
+			<p class="text-slate-300">Sem submissões para esta pesquisa.</p>
+		{% endfor %}
+	</form>
+	{% include 'components/_pagination.html' with page_obj=page_obj extra_query=extra_query %}
+</div>
+{% endblock %}
+
+

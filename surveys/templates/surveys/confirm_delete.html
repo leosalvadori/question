@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar exclusão{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto glass-effect p-6 rounded-xl border border-border/40">
+	<h1 class="text-xl font-semibold mb-4">Excluir {{ entity }}</h1>
+	<p class="text-muted-foreground mb-6">Tem certeza que deseja excluir <span class="font-medium">{{ object }}</span>? Esta ação não pode ser desfeita.</p>
+	<form method="post" class="flex items-center gap-3">
+		{% csrf_token %}
+		<a href="{{ cancel_url }}" class="px-4 py-2 rounded-lg border border-border hover:bg-accent">Cancelar</a>
+		<button type="submit" class="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground hover:opacity-90">Excluir</button>
+	</form>
+</div>
+{% endblock %}
+

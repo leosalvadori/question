@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Opção{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-6">{% if option %}Editar Opção{% else %}Nova Opção{% endif %}</h1>
+
+<form method="post" class="space-y-6 glass-effect p-6 rounded-xl border border-border/40">
+	{% csrf_token %}
+	{% for field in form %}
+		<div>
+			<label class="block text-sm font-medium mb-1" for="id_{{ field.name }}">{{ field.label }}</label>
+			{{ field }}
+			{% if field.help_text %}
+				<p class="mt-1 text-xs text-muted-foreground">{{ field.help_text }}</p>
+			{% endif %}
+			{% for error in field.errors %}
+				<p class="mt-1 text-xs text-destructive">{{ error }}</p>
+			{% endfor %}
+		</div>
+	{% endfor %}
+	<div>
+		<button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">Salvar</button>
+	</div>
+</form>
+{% endblock %}
+

@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Pesquisa - {{ survey.title }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+	<div>
+		<h1 class="text-2xl font-semibold">{{ survey.title }}</h1>
+		<p class="text-muted-foreground">Empresa: {{ survey.company.name }}</p>
+	</div>
+	<div class="space-x-2">
+		<a href="{% url 'survey_update' survey.id %}" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">Editar</a>
+		<a href="{% url 'survey_preview' survey.token %}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:opacity-90">Responder</a>
+		<a href="{% url 'survey_delete' survey.id %}" class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">Excluir</a>
+	</div>
+</div>
+
+<div class="mb-8">
+	<div class="p-6 rounded-xl glass-effect border border-border/40">
+		<p class="text-sm text-muted-foreground mb-2">Descrição</p>
+		<p>{{ survey.description|default:'—' }}</p>
+	</div>
+</div>
+
+<div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+	<div class="p-6 rounded-xl glass-effect border border-border/40">
+		<p class="text-sm text-muted-foreground">Token</p>
+		<p class="text-xl font-bold tracking-wider">{{ survey.token }}</p>
+	</div>
+	<div class="p-6 rounded-xl glass-effect border border-border/40">
+		<p class="text-sm text-muted-foreground">Criado em</p>
+		<p class="text-xl font-bold">{{ survey.created_at }}</p>
+	</div>
+</div>
+
+<div class="flex items-center justify-between mb-4">
+	<h2 class="text-xl font-semibold">Perguntas</h2>
+	<a href="{% url 'question_create' survey.id %}" class="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90">Nova Pergunta</a>
+</div>
+
+<div class="space-y-4">
+	{% for question in questions %}
+	<div class="p-4 rounded-lg glass-effect border border-border/40">
+		<div class="flex items-center justify-between">
+			<div>
+				<p class="font-medium">{{ question.question_text }}</p>
+				<p class="text-xs text-muted-foreground">Tipo: {{ question.get_question_type_display }}</p>
+			</div>
+			<div class="space-x-2">
+				<a href="{% url 'question_update' question.id %}" class="text-primary hover:underline">Editar</a>
+				<a href="{% url 'question_delete' question.id %}" class="text-red-400 hover:underline">Excluir</a>
+			</div>
+		</div>
+		{% if question.question_type == 'multiple_choice' or question.question_type == 'single_choice' %}
+			<div class="mt-3">
+				<p class="text-sm text-muted-foreground mb-1">Opções</p>
+				<ul class="list-disc pl-6">
+					{% for option in question.options.all %}
+					<li class="flex items-center justify-between">
+						<span>{{ option.option_text }}</span>
+						<div class="space-x-2">
+							<a href="{% url 'option_update' option.id %}" class="text-primary hover:underline text-sm">Editar</a>
+							<a href="{% url 'option_delete' option.id %}" class="text-red-400 hover:underline text-sm">Excluir</a>
+						</div>
+					</li>
+					{% empty %}
+					<li class="text-muted-foreground">Nenhuma opção cadastrada.</li>
+					{% endfor %}
+				</ul>
+				<a href="{% url 'option_create' question.id %}" class="inline-block mt-2 text-sm text-primary hover:underline">Adicionar opção</a>
+			</div>
+		{% endif %}
+	</div>
+	{% empty %}
+	<div class="p-6 rounded-xl glass-effect border border-border/40 text-center text-muted-foreground">
+		Nenhuma pergunta cadastrada.
+	</div>
+	{% endfor %}
+</div>
+{% endblock %}
+

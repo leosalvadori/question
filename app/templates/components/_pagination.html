@@ -1,0 +1,26 @@
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav class="mt-4 flex items-center justify-between">
+  <div class="text-sm text-muted-foreground">
+    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+  </div>
+  <div class="flex items-center gap-2">
+    {% if page_obj.has_previous %}
+      <a href="?page=1{{ extra_query|default:'' }}" class="px-3 py-1 rounded border">« Primeiro</a>
+      <a href="?page={{ page_obj.previous_page_number }}{{ extra_query|default:'' }}" class="px-3 py-1 rounded border">‹ Anterior</a>
+    {% else %}
+      <span class="px-3 py-1 rounded border opacity-50 cursor-not-allowed">« Primeiro</span>
+      <span class="px-3 py-1 rounded border opacity-50 cursor-not-allowed">‹ Anterior</span>
+    {% endif %}
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{{ extra_query|default:'' }}" class="px-3 py-1 rounded border">Próximo ›</a>
+      <a href="?page={{ page_obj.paginator.num_pages }}{{ extra_query|default:'' }}" class="px-3 py-1 rounded border">Último »</a>
+    {% else %}
+      <span class="px-3 py-1 rounded border opacity-50 cursor-not-allowed">Próximo ›</span>
+      <span class="px-3 py-1 rounded border opacity-50 cursor-not-allowed">Último »</span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+
+
