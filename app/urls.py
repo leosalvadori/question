@@ -22,6 +22,9 @@ urlpatterns = [
     # Main application URLs
     path('', views.home, name='home'),
 
+    # API Health Check
+    path('ping/', views.ping, name='ping'),
+
     # API Schema & Docs (always enabled)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

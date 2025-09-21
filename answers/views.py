@@ -1,10 +1,11 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.template.loader import render_to_string
+from django.views.decorators.http import require_http_methods
 from io import BytesIO
 import json
 
@@ -15,20 +16,23 @@ from rest_framework import status
 
 from companies.models import Company
 from surveys.models import Survey, Question
-from .models import Submission, SubmissionAnswer
+from .models import State, City, Submission, SubmissionAnswer
 from .serializers import SubmissionCreateSerializer, SubmissionResponseSerializer
 from .schema import submit_answers_schema
+from companies.decorators import require_token_not_revoked
 
 
 @submit_answers_schema
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@require_token_not_revoked
 def submit_answers(request):
     serializer = SubmissionCreateSerializer(data=request.data, context={'request': request})
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     submission = serializer.save()
     return Response(SubmissionResponseSerializer(submission).data, status=status.HTTP_201_CREATED)
+
 
 
 # ---------------------- Admin-like HTML Views ----------------------
@@ -76,19 +80,35 @@ def submissions_detail(request, survey_id: int):
         ids = request.POST.getlist('selected_ids')
         Submission.objects.filter(survey=survey, id__in=ids).delete()
         params = []
-        for key in ('from', 'to', 'page', 'page_size'):
+        for key in ('from', 'to', 'state', 'city', 'page', 'page_size'):
             val = request.POST.get(key)
             if val:
                 params.append(f"{key}={val}")
         query = ('?' + '&'.join(params)) if params else ''
         return redirect(f"{reverse('answers_detail', args=[survey_id])}{query}")
-    # Optional filters
+    
+    # Get filter options
+    states = _get_states_with_submissions(survey_id)
+    selected_state_id = request.GET.get('state')
+    selected_city_id = request.GET.get('city')
+    
+    # Get cities based on selected state
+    cities = []
+    if selected_state_id:
+        cities = _get_cities_with_submissions(survey_id, int(selected_state_id))
+    
+    # Apply filters
     date_from = request.GET.get('from')
     date_to = request.GET.get('to')
     if date_from:
         submissions = submissions.filter(submitted_at__date__gte=date_from)
     if date_to:
         submissions = submissions.filter(submitted_at__date__lte=date_to)
+    if selected_state_id:
+        submissions = submissions.filter(state_id=selected_state_id)
+    if selected_city_id:
+        submissions = submissions.filter(city_id=selected_city_id)
+    
     submissions = submissions.order_by('-submitted_at')
     paginator = Paginator(submissions, 15)
     submissions_page = paginator.get_page(request.GET.get('page'))
@@ -115,6 +135,8 @@ def submissions_detail(request, survey_id: int):
                 'ip_address': sub.ip_address,
                 'latitude': float(sub.latitude) if sub.latitude is not None else None,
                 'longitude': float(sub.longitude) if sub.longitude is not None else None,
+                'state': sub.state.name if sub.state else None,
+                'city': sub.city.name if sub.city else None,
                 'answers': [],
             }
             for ans in answers_by_submission.get(sub.id, []):
@@ -133,7 +155,7 @@ def submissions_detail(request, survey_id: int):
         resp = HttpResponse(content_type='text/csv')
         resp['Content-Disposition'] = 'attachment; filename="submissions_detail.csv"'
         writer = csv.writer(resp)
-        writer.writerow(['Submission ID', 'Submitted At', 'IP', 'Latitude', 'Longitude', 'Question', 'Answer'])
+        writer.writerow(['Submission ID', 'Submitted At', 'IP', 'State', 'City', 'Latitude', 'Longitude', 'Question', 'Answer'])
         for sub in submissions_page:
             for ans in answers_by_submission.get(sub.id, []):
                 if ans.selected_option_id:
@@ -144,6 +166,8 @@ def submissions_detail(request, survey_id: int):
                     sub.id,
                     sub.submitted_at,
                     sub.ip_address or '',
+                    sub.state.name if sub.state else '',
+                    sub.city.name if sub.city else '',
                     sub.latitude or '',
                     sub.longitude or '',
                     ans.question.question_text,
@@ -157,6 +181,10 @@ def submissions_detail(request, survey_id: int):
         'answers_by_submission': answers_by_submission,
         'questions': questions,
         'page_obj': submissions_page,
+        'states': states,
+        'cities': cities,
+        'selected_state_id': selected_state_id,
+        'selected_city_id': selected_city_id,
         'extra_query': _build_extra_query(request, exclude_keys={'page'}),
     })
 
@@ -164,14 +192,30 @@ def submissions_detail(request, survey_id: int):
 @login_required
 def survey_dashboard(request, survey_id: int):
     survey = get_object_or_404(Survey.objects.select_related('company'), id=survey_id)
-    total_submissions = Submission.objects.filter(survey=survey).count()
-    last_submission = Submission.objects.filter(survey=survey).order_by('-submitted_at').first()
+    
+    # Get filter options
+    states = _get_states_with_submissions(survey_id)
+    selected_state_id = request.GET.get('state')
+    selected_city_id = request.GET.get('city')
+    
+    # Get cities based on selected state
+    cities = []
+    if selected_state_id:
+        cities = _get_cities_with_submissions(survey_id, int(selected_state_id))
+    
+    # Apply filters to submissions
+    submissions_qs = Submission.objects.filter(survey=survey)
+    if selected_state_id:
+        submissions_qs = submissions_qs.filter(state_id=selected_state_id)
+    if selected_city_id:
+        submissions_qs = submissions_qs.filter(city_id=selected_city_id)
+    
+    total_submissions = submissions_qs.count()
+    last_submission = submissions_qs.order_by('-submitted_at').first()
 
     # Collect geo points for heatmap
     geo_points = []
-    for sub in Submission.objects.filter(
-        survey=survey
-    ).exclude(
+    for sub in submissions_qs.exclude(
         latitude__isnull=True
     ).exclude(
         longitude__isnull=True
@@ -190,9 +234,15 @@ def survey_dashboard(request, survey_id: int):
     distributions = []
     for q in Question.objects.filter(survey=survey).order_by('id'):
         if q.question_type in (Question.MULTIPLE_CHOICE, Question.SINGLE_CHOICE):
+            # Apply same filters to answers
+            answers_qs = SubmissionAnswer.objects.filter(question=q, selected_option__isnull=False)
+            if selected_state_id:
+                answers_qs = answers_qs.filter(submission__state_id=selected_state_id)
+            if selected_city_id:
+                answers_qs = answers_qs.filter(submission__city_id=selected_city_id)
+            
             opts = (
-                SubmissionAnswer.objects
-                .filter(question=q, selected_option__isnull=False)
+                answers_qs
                 .values('selected_option_id', 'selected_option__option_text')
                 .annotate(total=Count('id'))
                 .order_by('-total')
@@ -205,6 +255,10 @@ def survey_dashboard(request, survey_id: int):
         'last_submission': last_submission,
         'distributions': distributions,
         'geo_points': geo_points,
+        'states': states,
+        'cities': cities,
+        'selected_state_id': selected_state_id,
+        'selected_city_id': selected_city_id,
     })
 
 @login_required
@@ -232,6 +286,41 @@ def _build_extra_query(request, exclude_keys: set[str] | None = None) -> str:
             continue
         parts.append(f"&{k}={v}")
     return ''.join(parts)
+
+
+def _get_states_with_submissions(survey_id: int) -> list[State]:
+    """Get all states that have submissions for a specific survey."""
+    return list(
+        State.objects
+        .filter(submissions__survey_id=survey_id)
+        .distinct()
+        .order_by('name')
+    )
+
+
+def _get_cities_with_submissions(survey_id: int, state_id: int = None) -> list[City]:
+    """Get all cities that have submissions for a specific survey, optionally filtered by state."""
+    queryset = City.objects.filter(submissions__survey_id=survey_id).distinct()
+    if state_id:
+        queryset = queryset.filter(state_id=state_id)
+    return list(queryset.order_by('name'))
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_cities_for_state(request, survey_id: int):
+    """AJAX endpoint to get cities for a specific state and survey."""
+    state_id = request.GET.get('state_id')
+    if not state_id:
+        return JsonResponse({'cities': []})
+    
+    cities = _get_cities_with_submissions(survey_id, int(state_id))
+    return JsonResponse({
+        'cities': [
+            {'id': city.id, 'name': city.name, 'uf': city.state.uf}
+            for city in cities
+        ]
+    })
 
 
 def _build_heat_grid(points: list[tuple[float, float]], rows: int, cols: int) -> dict:

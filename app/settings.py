@@ -38,7 +38,7 @@ else:
 # Allow localhost by default when ALLOWED_HOSTS is not provided.
 _allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
 if _allowed_hosts_env.strip() == '':
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'leosalvadori.pythonanywhere.com']
 else:
     ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()]
 
@@ -178,8 +178,9 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=365 * 100),
 }
+
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Question API',

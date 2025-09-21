@@ -30,10 +30,38 @@
 		</div>
 		<div class="space-x-2 no-print">
 			<a href="{% url 'answers_detail' survey.id %}" class="px-3 py-2 bg-slate-700 text-white rounded">Detalhes</a>
-			<a href="?format=csv" class="px-3 py-2 bg-emerald-600 text-white rounded">Exportar CSV</a>
-			<a href="?format=json" class="px-3 py-2 bg-blue-600 text-white rounded">Exportar JSON</a>
+			<a href="?format=csv{% if selected_state_id %}&state={{ selected_state_id }}{% endif %}{% if selected_city_id %}&city={{ selected_city_id }}{% endif %}" class="px-3 py-2 bg-emerald-600 text-white rounded">Exportar CSV</a>
+			<a href="?format=json{% if selected_state_id %}&state={{ selected_state_id }}{% endif %}{% if selected_city_id %}&city={{ selected_city_id }}{% endif %}" class="px-3 py-2 bg-blue-600 text-white rounded">Exportar JSON</a>
 			<button id="btn-print" class="px-3 py-2 bg-purple-600 text-white rounded">Imprimir PDF</button>
 		</div>
+	</div>
+
+	<!-- Filtros -->
+	<div class="mb-6 p-4 bg-slate-800 rounded-lg">
+		<form method="get" class="flex items-end gap-4 flex-wrap">
+			<div class="flex items-center gap-2">
+				<label class="text-sm text-slate-300">Estado</label>
+				<select name="state" id="state-filter" class="border rounded p-2 text-black">
+					<option value="">Todos</option>
+					{% for state in states %}
+					<option value="{{ state.id }}" {% if selected_state_id == state.id|stringformat:'s' %}selected{% endif %}>{{ state.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="flex items-center gap-2">
+				<label class="text-sm text-slate-300">Cidade</label>
+				<select name="city" id="city-filter" class="border rounded p-2 text-black">
+					<option value="">Todas</option>
+					{% for city in cities %}
+					<option value="{{ city.id }}" {% if selected_city_id == city.id|stringformat:'s' %}selected{% endif %}>{{ city.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="flex items-center gap-2">
+				<button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Aplicar Filtros</button>
+				<a href="?" class="px-4 py-2 bg-gray-200 text-black rounded">Limpar</a>
+			</div>
+		</form>
 	</div>
 
 	<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -294,6 +322,47 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 });
+
+// Filtro dinâmico estado -> cidade
+const stateFilter = document.getElementById('state-filter');
+const cityFilter = document.getElementById('city-filter');
+const surveyId = {{ survey.id }};
+
+if (stateFilter && cityFilter) {
+    stateFilter.addEventListener('change', function() {
+        const stateId = this.value;
+        
+        // Clear city filter
+        cityFilter.innerHTML = '<option value="">Todas</option>';
+        
+        if (stateId) {
+            // Show loading
+            cityFilter.innerHTML = '<option value="">Carregando...</option>';
+            cityFilter.disabled = true;
+            
+            // Fetch cities for selected state
+            fetch(`/answers/${surveyId}/cities/?state_id=${stateId}`)
+                .then(response => response.json())
+                .then(data => {
+                    cityFilter.innerHTML = '<option value="">Todas</option>';
+                    data.cities.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city.id;
+                        option.textContent = city.name;
+                        cityFilter.appendChild(option);
+                    });
+                    cityFilter.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error loading cities:', error);
+                    cityFilter.innerHTML = '<option value="">Erro ao carregar</option>';
+                    cityFilter.disabled = false;
+                });
+        } else {
+            cityFilter.disabled = false;
+        }
+    });
+}
 </script>
 {% endblock %}
 

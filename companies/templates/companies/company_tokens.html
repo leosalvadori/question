@@ -12,40 +12,181 @@
 	</form>
 </div>
 
-<div class="glass-effect rounded-xl border border-border/40 overflow-hidden">
-	<table class="min-w-full">
+<div class="glass-effect rounded-xl border border-border/40 overflow-x-auto">
+	<table class="min-w-full table-fixed">
 		<thead class="text-left text-sm text-muted-foreground border-b border-border/40">
 			<tr>
-				<th class="py-3 px-4">Rótulo</th>
-				<th class="py-3 px-4">JTI</th>
-				<th class="py-3 px-4">Criado em</th>
-				<th class="py-3 px-4">Status</th>
-				<th class="py-3 px-4"></th>
+				<th class="py-3 px-4 w-24">Rótulo</th>
+				<th class="py-3 px-4 w-64">Access Token</th>
+				<th class="py-3 px-4 w-64">Refresh Token</th>
+				<th class="py-3 px-4 w-32">Criado em</th>
+				<th class="py-3 px-4 w-32">Válido até</th>
+				<th class="py-3 px-4 w-32">Revogado em</th>
+				<th class="py-3 px-4 w-20">Status</th>
+				<th class="py-3 px-4 w-48">Ações</th>
 			</tr>
 		</thead>
 		<tbody class="divide-y divide-border/40">
 			{% for t in tokens %}
 			<tr>
 				<td class="py-3 px-4">{{ t.label|default:'—' }}</td>
-				<td class="py-3 px-4 font-mono text-xs">{{ t.refresh_jti }}</td>
-				<td class="py-3 px-4">{{ t.created_at }}</td>
-				<td class="py-3 px-4">{% if t.revoked_at %}<span class="text-red-400">Revogado</span>{% else %}<span class="text-green-400">Ativo</span>{% endif %}</td>
-				<td class="py-3 px-4 text-right">
+				<td class="py-3 px-4">
+					{% if t.access_token %}
+						<div class="flex items-center gap-2">
+							<span class="font-mono text-xs bg-muted px-2 py-1 rounded truncate max-w-48" title="{{ t.access_token }}">
+								{{ t.access_token|truncatechars:30 }}
+							</span>
+							<button type="button" class="copy-btn px-2 py-1 text-xs border border-border rounded hover:bg-accent" data-value="{{ t.access_token }}" title="Copiar access token">
+								📋
+							</button>
+						</div>
+					{% else %}
+						<span class="text-muted-foreground text-xs">—</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4">
+					{% if t.refresh_token %}
+						<div class="flex items-center gap-2">
+							<span class="font-mono text-xs bg-muted px-2 py-1 rounded truncate max-w-48" title="{{ t.refresh_token }}">
+								{{ t.refresh_token|truncatechars:30 }}
+							</span>
+							<button type="button" class="copy-btn px-2 py-1 text-xs border border-border rounded hover:bg-accent" data-value="{{ t.refresh_token }}" title="Copiar refresh token">
+								📋
+							</button>
+						</div>
+					{% else %}
+						<span class="text-muted-foreground text-xs">—</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4 text-sm">{{ t.created_at|date:"d/m/Y H:i" }}</td>
+				<td class="py-3 px-4 text-sm">
+					{% if t.access_token %}
+						<span class="text-green-400">{{ t.expires_at|date:"d/m/Y H:i" }}</span>
+					{% else %}
+						<span class="text-muted-foreground">—</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4 text-sm">
+					{% if t.revoked_at %}
+						<span class="text-red-400">{{ t.revoked_at|date:"d/m/Y H:i" }}</span>
+					{% else %}
+						<span class="text-muted-foreground">—</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4">
+					{% if t.revoked_at %}
+						<span class="text-red-400">Revogado</span>
+					{% else %}
+						<span class="text-green-400">Ativo</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4">
 					{% if not t.revoked_at %}
-					<form method="post" action="{% url 'company_token_revoke' company.id t.id %}">
-						{% csrf_token %}
-						<button class="px-3 py-1 text-sm rounded bg-destructive text-destructive-foreground hover:opacity-90">Revogar</button>
-					</form>
+					<div class="flex gap-1 flex-col sm:flex-row">
+						{% if t.refresh_token %}
+						<button onclick="refreshToken('{{ t.refresh_token }}')" 
+								class="px-2 py-1 text-xs rounded bg-blue-500 text-white hover:opacity-90 whitespace-nowrap flex-shrink-0"
+								title="Renovar access token">
+							🔄 Refresh
+						</button>
+						{% endif %}
+						<form method="post" action="{% url 'company_token_revoke' company.id t.id %}" class="inline flex-shrink-0">
+							{% csrf_token %}
+							<button class="px-2 py-1 text-xs rounded bg-destructive text-destructive-foreground hover:opacity-90 whitespace-nowrap">Revogar</button>
+						</form>
+					</div>
+					{% else %}
+					<span class="text-muted-foreground text-xs">—</span>
 					{% endif %}
 				</td>
 			</tr>
 			{% empty %}
 			<tr>
-				<td colspan="5" class="py-6 px-4 text-center text-muted-foreground">Nenhum token gerado ainda.</td>
+				<td colspan="8" class="py-6 px-4 text-center text-muted-foreground">Nenhum token gerado ainda.</td>
 			</tr>
 			{% endfor %}
 		</tbody>
 	</table>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	console.log('DOM loaded, setting up event listeners');
+	
+	document.querySelectorAll('.copy-btn').forEach(btn => {
+		btn.addEventListener('click', async function() {
+			const val = this.getAttribute('data-value');
+			try {
+				await navigator.clipboard.writeText(val);
+				// Show temporary feedback
+				const originalText = this.innerHTML;
+				this.innerHTML = '✓';
+				this.classList.add('text-green-500');
+				setTimeout(() => {
+					this.innerHTML = originalText;
+					this.classList.remove('text-green-500');
+				}, 1000);
+			} catch(e) { 
+				alert('Falha ao copiar token');
+			}
+		});
+	});
+	
+	// Test if refreshToken function is available
+	console.log('refreshToken function available:', typeof refreshToken);
+});
+
+function refreshToken(refreshTokenStr) {
+	console.log('Refreshing token with refresh token');
+	const button = event.target;
+	const originalText = button.innerHTML;
+	
+	// Show loading state
+	button.innerHTML = '⏳';
+	button.disabled = true;
+	
+	// Get CSRF token
+	const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+	
+	// Make the request to the new endpoint
+	fetch('/auth/refresh/', {
+		method: 'POST',
+		headers: {
+			'X-CSRFToken': csrfToken,
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			refresh: refreshTokenStr
+		})
+	})
+	.then(response => {
+		console.log('Response status:', response.status);
+		if (response.ok) {
+			return response.json();
+		} else {
+			return response.json().then(errorData => {
+				throw new Error(errorData.error || 'Erro desconhecido');
+			});
+		}
+	})
+	.then(data => {
+		console.log('Success data:', data);
+		// Show success feedback
+		button.innerHTML = '✓';
+		button.classList.add('bg-green-500');
+		
+		// Reload page to show updated token
+		setTimeout(() => {
+			location.reload();
+		}, 1000);
+	})
+	.catch(error => {
+		console.error('Error:', error);
+		alert(`Erro ao renovar token: ${error.message}`);
+		button.innerHTML = originalText;
+		button.disabled = false;
+	});
+}
+</script>
 {% endblock %}
 

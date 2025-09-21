@@ -11,6 +11,24 @@
 	</div>
 </div>
 
+<!-- Filter Section -->
+<div class="mb-6 glass-effect rounded-xl border border-border/40 p-4">
+	<form method="get" class="flex items-center gap-4">
+		<div class="flex-1">
+			<label for="company" class="block text-sm font-medium text-muted-foreground mb-2">Filtrar por empresa</label>
+			<select name="company" id="company" class="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+				<option value="">Todas as empresas</option>
+				{% for company in companies %}
+				<option value="{{ company.id }}" {% if selected_company_id == company.id|stringformat:"s" %}selected{% endif %}>
+					{{ company.name }}
+				</option>
+				{% endfor %}
+			</select>
+		</div>
+	</form>
+</div>
+
+
 <div class="glass-effect rounded-xl border border-border/40 overflow-hidden">
 	<table class="min-w-full">
 		<thead class="text-left text-sm text-muted-foreground border-b border-border/40">
@@ -53,6 +71,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+	// Copy token functionality
 	const buttons = document.querySelectorAll('.copy-token');
 	buttons.forEach(btn => {
 		btn.addEventListener('click', async function() {
@@ -69,6 +88,14 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 		});
 	});
+
+	// Auto-submit filter form when company selection changes
+	const companySelect = document.getElementById('company');
+	if (companySelect) {
+		companySelect.addEventListener('change', function() {
+			this.form.submit();
+		});
+	}
 });
 </script>
 </div>

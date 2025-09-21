@@ -25,6 +25,9 @@ class SubmissionCreateSerializer(serializers.Serializer):
     occurred_at = serializers.DateTimeField(required=False, allow_null=True)
     latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
+    # Geographic data for preview/testing
+    ibge_code = serializers.CharField(required=False, allow_blank=True)
+    state_code = serializers.CharField(required=False, allow_blank=True)
     answers = SubmissionAnswerInputSerializer(many=True)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
@@ -114,6 +117,28 @@ class SubmissionCreateSerializer(serializers.Serializer):
         request = self.context.get('request')
         survey: Survey = validated_data['survey']
 
+        # Process geographic data if provided
+        city = None
+        state = None
+        ibge_code = validated_data.get('ibge_code')
+        state_code = validated_data.get('state_code')
+        
+        if ibge_code and state_code:
+            try:
+                from .models import City, State
+                city = City.objects.get(ibge_code=ibge_code)
+                state = State.objects.get(code=state_code)
+                
+                # Validate that the city belongs to the state
+                if city.state != state:
+                    raise serializers.ValidationError(
+                        f'City {city.name} does not belong to state {state.name}'
+                    )
+            except City.DoesNotExist:
+                raise serializers.ValidationError(f'City with IBGE code {ibge_code} not found')
+            except State.DoesNotExist:
+                raise serializers.ValidationError(f'State with code {state_code} not found')
+
         submission = Submission.objects.create(
             survey=survey,
             company=survey.company,
@@ -121,6 +146,8 @@ class SubmissionCreateSerializer(serializers.Serializer):
             occurred_at=validated_data.get('occurred_at') or None,
             latitude=validated_data.get('latitude'),
             longitude=validated_data.get('longitude'),
+            city=city,
+            state=state,
             ip_address=self._get_ip_from_request(request),
             user_agent=self._get_ua_from_request(request),
         )

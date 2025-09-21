@@ -4,52 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.views import PasswordChangeView
 from django.urls import reverse_lazy
-from django.contrib.auth.models import Permission
-from django.contrib.contenttypes.models import ContentType
 from .forms import CustomUserCreationForm, UserProfileForm, CustomPasswordChangeForm
 
 
-def assign_user_permissions(user):
-    """
-    Assign full CRUD permissions to a new user for the specified models.
-    This function assigns view, add, change, and delete permissions for:
-    products, categories, suppliers, brands, inflows, outflows
-    """
-    # Define the apps and models that users should have permissions for
-    app_models = [
-        ('products', 'product'),
-        ('categories', 'category'),
-        ('suppliers', 'supplier'),
-        ('brands', 'brand'),
-        ('inflows', 'inflow'),
-        ('outflows', 'outflow'),
-    ]
-    
-    permissions_to_assign = []
-    
-    for app_label, model_name in app_models:
-        try:
-            content_type = ContentType.objects.get(app_label=app_label, model=model_name)
-            
-            # Get all CRUD permissions for this model
-            permissions = Permission.objects.filter(
-                content_type=content_type,
-                codename__in=[
-                    f'view_{model_name}',
-                    f'add_{model_name}',
-                    f'change_{model_name}',
-                    f'delete_{model_name}'
-                ]
-            )
-            permissions_to_assign.extend(permissions)
-            
-        except ContentType.DoesNotExist:
-            # Skip if the content type doesn't exist (model might not be migrated yet)
-            continue
-    
-    # Assign all permissions to the user
-    user.user_permissions.set(permissions_to_assign)
-    user.save()
 
 
 def register(request):
@@ -63,8 +20,6 @@ def register(request):
             # Save the new user
             user = form.save()
             
-            # Assign permissions to the new user
-            assign_user_permissions(user)
             
             # Log the user in automatically after registration
             login(request, user)

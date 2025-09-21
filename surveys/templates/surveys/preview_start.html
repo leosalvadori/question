@@ -6,13 +6,72 @@
 	{% if error %}
 	<div class="p-3 mb-4 bg-red-100 text-red-800 rounded">{{ error }}</div>
 	{% endif %}
-	<form method="post">
+	<form method="post" id="preview-form">
 		{% csrf_token %}
-		<label class="block text-sm font-medium mb-1">Token da Pesquisa</label>
-		<input name="token" type="text" class="w-full border rounded p-2 mb-4 text-black placeholder-gray-600" placeholder="Ex: 2-M58TVW" required>
-		<button class="px-4 py-2 bg-blue-600 text-white rounded">Próximo</button>
+		
+		<div class="mb-4">
+			<label class="block text-sm font-medium mb-1">Estado</label>
+			<select name="state_code" id="state-select" class="w-full border rounded p-2 text-black" required onchange="loadCities()">
+				<option value="">Selecione um estado</option>
+				{% for state in states %}
+				<option value="{{ state.code }}" {% if selected_state_code == state.code %}selected{% endif %}>
+					{{ state.name }} ({{ state.uf }})
+				</option>
+				{% endfor %}
+			</select>
+		</div>
+		
+		<div class="mb-4">
+			<label class="block text-sm font-medium mb-1">Cidade</label>
+			<select name="city_ibge_code" id="city-select" class="w-full border rounded p-2 text-black" required {% if not cities %}disabled{% endif %}>
+				<option value="">{% if cities %}Selecione uma cidade{% else %}Primeiro selecione um estado{% endif %}</option>
+				{% for city in cities %}
+				<option value="{{ city.ibge_code }}">{{ city.name }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		
+		<div class="mb-4">
+			<label class="block text-sm font-medium mb-1">Token da Pesquisa</label>
+			<input name="token" id="token" type="text" class="w-full border rounded p-2 text-black placeholder-gray-600" placeholder="Ex: 2-M58TVW" required>
+		</div>
+		
+		<button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded" disabled id="submit-btn">Próximo</button>
 	</form>
 </div>
+
+<script>
+function loadCities() {
+	const stateCode = document.getElementById('state-select').value;
+	if (stateCode) {
+		// Redirect to same page with state_code parameter
+		window.location.href = `{% url 'survey_preview_start' %}?state_code=${stateCode}`;
+	}
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+	const stateSelect = document.getElementById('state-select');
+	const citySelect = document.getElementById('city-select');
+	const tokenInput = document.getElementById('token');
+	const submitBtn = document.getElementById('submit-btn');
+	
+	function checkFormValidity() {
+		const isStateSelected = stateSelect.value !== '';
+		const isCitySelected = citySelect.value !== '';
+		const isTokenFilled = tokenInput.value.trim() !== '';
+		
+		submitBtn.disabled = !(isStateSelected && isCitySelected && isTokenFilled);
+	}
+	
+	// Add event listeners to all form fields
+	stateSelect.addEventListener('change', checkFormValidity);
+	citySelect.addEventListener('change', checkFormValidity);
+	tokenInput.addEventListener('input', checkFormValidity);
+	
+	// Check form validity on page load
+	checkFormValidity();
+});
+</script>
 {% endblock %}
 
 

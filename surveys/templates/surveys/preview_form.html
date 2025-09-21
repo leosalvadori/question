@@ -4,6 +4,18 @@
 <div class="max-w-3xl mx-auto">
 	<h1 class="text-xl font-semibold mb-2">{{ survey.title }}</h1>
 	<p class="text-sm text-gray-600 mb-6">{{ survey.description }}</p>
+	
+	<!-- Location info from session -->
+	<div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
+		<h3 class="font-medium text-blue-800 mb-2">Localização selecionada:</h3>
+		<p class="text-sm text-blue-700" id="location-info">
+			{% if location_info %}
+				{{ location_info }}
+			{% else %}
+				Localização não definida
+			{% endif %}
+		</p>
+	</div>
 
 	{% if errors %}
 	<div class="p-3 mb-4 bg-red-100 text-red-800 rounded">

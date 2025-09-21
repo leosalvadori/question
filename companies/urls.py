@@ -8,6 +8,9 @@ urlpatterns = [
 	path('companies/<int:pk>/tokens/create/', views.company_token_create, name='company_token_create'),
 	path('companies/<int:pk>/tokens/<int:token_id>/revoke/', views.company_token_revoke, name='company_token_revoke'),
 	
+	# Token refresh (standard JWT approach for mobile and web)
+	path('auth/refresh/', views.refresh_token, name='refresh_token'),
+	
 	# Status management
 	path('companies/<int:pk>/activate/', views.company_activate, name='company_activate'),
 	path('companies/<int:pk>/deactivate/', views.company_deactivate, name='company_deactivate'),

@@ -46,4 +46,3 @@ cp .env.example .env
 - Esquema OpenAPI: `/api/schema/`
 - Swagger UI: `/api/docs/`
 - Redoc: `/api/redoc/`
-'## question' 

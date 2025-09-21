@@ -243,7 +243,10 @@ class CompanyToken(models.Model):
 	company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='api_tokens')
 	label = models.CharField(max_length=100, blank=True)
 	refresh_jti = models.CharField(max_length=50, db_index=True)
+	access_token = models.TextField(blank=True, help_text='Access token JWT (armazenado apenas para exibição)')
+	refresh_token = models.TextField(blank=True, help_text='Refresh token JWT para renovação do access token')
 	created_at = models.DateTimeField(auto_now_add=True)
+	expires_at = models.DateTimeField(null=True, blank=True, help_text='Data de expiração do access token')
 	revoked_at = models.DateTimeField(null=True, blank=True)
 
 	def __str__(self) -> str:  # type: ignore[override]

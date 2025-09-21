@@ -33,9 +33,9 @@ class Question(models.Model):
 	SINGLE_CHOICE = 'single_choice'
 	MULTIPLE_CHOICE = 'multiple_choice'
 	QUESTION_TYPES = [
-		(TEXT, 'Text'),
-		(SINGLE_CHOICE, 'Single Choice'),
-		(MULTIPLE_CHOICE, 'Multiple Choice'),
+		(TEXT, 'Texto'),
+		(SINGLE_CHOICE, 'Escolha única'),
+		(MULTIPLE_CHOICE, 'Múltiplas escolhas'),
 	]
 
 	survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='questions')
@@ -52,8 +52,8 @@ class Option(models.Model):
 	CHOICE = 'choice'
 	TEXT = 'text'
 	OPTION_TYPES = [
-		(CHOICE, 'Choice'),
-		(TEXT, 'Text'),
+		(CHOICE, 'Opção'),
+		(TEXT, 'Texto'),
 	]
 
 	question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='options')

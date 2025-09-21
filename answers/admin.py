@@ -1,6 +1,24 @@
 from django.contrib import admin
 
-from .models import Submission, SubmissionAnswer
+from .models import State, City, Submission, SubmissionAnswer
+
+
+@admin.register(State)
+class StateAdmin(admin.ModelAdmin):
+    list_display = ('code', 'uf', 'name', 'region', 'created_at')
+    list_filter = ('region',)
+    search_fields = ('name', 'uf', 'code')
+    ordering = ('name',)
+
+
+@admin.register(City)
+class CityAdmin(admin.ModelAdmin):
+    list_display = ('name', 'state', 'ibge_code', 'is_capital', 'area_code')
+    list_filter = ('state', 'is_capital', 'state__region')
+    search_fields = ('name', 'ibge_code', 'state__name', 'state__uf')
+    raw_id_fields = ('state',)
+    list_select_related = ('state',)
+    ordering = ('name',)
 
 
 class SubmissionAnswerInline(admin.TabularInline):
@@ -14,22 +32,25 @@ class SubmissionAnswerInline(admin.TabularInline):
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'survey', 'company', 'survey_token', 'ip_address',
-        'latitude', 'longitude', 'submitted_at',
+        'id', 'survey', 'company', 'survey_token', 'city', 'state',
+        'ip_address', 'latitude', 'longitude', 'submitted_at',
     )
     list_filter = (
-        'survey', 'company', ('submitted_at', admin.DateFieldListFilter),
+        'survey', 'company', 'state', 'city__is_capital',
+        ('submitted_at', admin.DateFieldListFilter),
     )
     search_fields = (
         'survey__title', 'company__name', 'survey_token', 'ip_address',
+        'city__name', 'state__name', 'state__uf',
     )
     date_hierarchy = 'submitted_at'
     inlines = [SubmissionAnswerInline]
-    list_select_related = ('survey', 'company')
+    list_select_related = ('survey', 'company', 'city', 'state')
+    raw_id_fields = ('city', 'state')
 
     def get_queryset(self, request):  # type: ignore[override]
         qs = super().get_queryset(request)
-        return qs.select_related('survey', 'company')
+        return qs.select_related('survey', 'company', 'city', 'state')
 
 
 @admin.register(SubmissionAnswer)

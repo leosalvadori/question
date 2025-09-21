@@ -1,4 +1,4 @@
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -15,6 +15,7 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema
 from .schema import get_survey_by_token_schema
 from answers.serializers import SubmissionCreateSerializer
+from companies.decorators import require_token_not_revoked
 
 
 # Companies
@@ -184,11 +185,28 @@ def company_delete(request, pk: int):
 @login_required
 def survey_list(request):
 	surveys_qs = Survey.objects.select_related('company').order_by('-created_at')
+	
+	# Filtering by company
+	company_id = request.GET.get('company')
+	if company_id:
+		surveys_qs = surveys_qs.filter(company_id=company_id)
+	
+	# Get all companies for the filter dropdown
+	companies = Company.objects.all().order_by('name')
+	
 	page_size = int(request.GET.get('page_size') or 15)
 	paginator = Paginator(surveys_qs, page_size)
 	page = request.GET.get('page')
 	surveys = paginator.get_page(page)
-	return render(request, 'surveys/survey_list.html', {'surveys': surveys, 'page_obj': surveys, 'page_size': page_size})
+	
+	context = {
+		'surveys': surveys,
+		'page_obj': surveys,
+		'page_size': page_size,
+		'companies': companies,
+		'selected_company_id': company_id,
+	}
+	return render(request, 'surveys/survey_list.html', context)
 
 
 @login_required
@@ -266,15 +284,30 @@ def question_update(request, pk: int):
 @login_required
 def question_delete(request, pk: int):
 	question = get_object_or_404(Question, pk=pk)
+	
+	# Check if there are any answers linked to this question
+	from answers.models import SubmissionAnswer
+	answers_count = SubmissionAnswer.objects.filter(question=question).count()
+	
 	if request.method == 'POST':
 		parent_survey_id = question.survey_id
 		question.delete()
 		return redirect('survey_detail', pk=parent_survey_id)
-	return render(request, 'surveys/confirm_delete.html', {
-		'object': question,
-		'entity': 'pergunta',
-		'cancel_url': reverse('survey_detail', args=[question.survey_id])
-	})
+	
+	# Use specific template for questions with warning if there are answers
+	if answers_count > 0:
+		return render(request, 'surveys/question_confirm_delete.html', {
+			'object': question,
+			'entity': 'pergunta',
+			'answers_count': answers_count,
+			'cancel_url': reverse('survey_detail', args=[question.survey_id])
+		})
+	else:
+		return render(request, 'surveys/confirm_delete.html', {
+			'object': question,
+			'entity': 'pergunta',
+			'cancel_url': reverse('survey_detail', args=[question.survey_id])
+		})
 
 
 # Options
@@ -320,14 +353,58 @@ def option_delete(request, pk: int):
 
 # ---------------------- Preview (public, no bearer) ----------------------
 
+@login_required
 def survey_preview_start(request):
 	"""Simple page to enter a Survey TOKEN and go to preview."""
 	if request.method == 'POST':
 		token = (request.POST.get('token') or '').strip()
-		if token:
+		state_code = request.POST.get('state_code', '').strip()
+		city_ibge_code = request.POST.get('city_ibge_code', '').strip()
+		
+		if token and state_code and city_ibge_code:
+			# Store geographic data in session for the preview
+			request.session['preview_state_code'] = state_code
+			request.session['preview_city_ibge_code'] = city_ibge_code
 			return redirect('survey_preview', token=token)
-		return render(request, 'surveys/preview_start.html', {'error': 'Informe um token válido.'})
-	return render(request, 'surveys/preview_start.html')
+		else:
+			error_msg = 'Informe um token válido, estado e cidade.'
+			# Reload states and cities for error display
+			from answers.models import State, City
+			states = State.objects.all().order_by('name')
+			selected_state_code = request.POST.get('state_code', '')
+			cities = []
+			if selected_state_code:
+				try:
+					state = State.objects.get(code=selected_state_code)
+					cities = City.objects.filter(state=state).order_by('name')
+				except State.DoesNotExist:
+					pass
+			return render(request, 'surveys/preview_start.html', {
+				'error': error_msg,
+				'states': states,
+				'cities': cities,
+				'selected_state_code': selected_state_code
+			})
+	
+	# Load states for the form
+	from answers.models import State, City
+	states = State.objects.all().order_by('name')
+	
+	# Check if a state was selected via GET parameter
+	selected_state_code = request.GET.get('state_code')
+	cities = []
+	if selected_state_code:
+		try:
+			state = State.objects.get(code=selected_state_code)
+			cities = City.objects.filter(state=state).order_by('name')
+		except State.DoesNotExist:
+			selected_state_code = None
+	
+	return render(request, 'surveys/preview_start.html', {
+		'states': states,
+		'cities': cities,
+		'selected_state_code': selected_state_code
+	})
 
 
 def survey_preview(request, token: str):
@@ -359,11 +436,17 @@ def survey_preview(request, token: str):
 				text_value = (request.POST.get(f'text_{q.id}') or '').strip()
 				answers_payload.append({'question_id': q.id, 'text_response': text_value})
 
+		# Get geographic data from session
+		state_code = request.session.get('preview_state_code')
+		city_ibge_code = request.session.get('preview_city_ibge_code')
+		
 		payload = {
 			'token': token,
 			'occurred_at': request.POST.get('occurred_at') or None,
 			'latitude': request.POST.get('latitude') or None,
 			'longitude': request.POST.get('longitude') or None,
+			'state_code': state_code,
+			'ibge_code': city_ibge_code,
 			'answers': answers_payload,
 		}
 
@@ -378,7 +461,25 @@ def survey_preview(request, token: str):
 			'errors': serializer.errors,
 		})
 
-	return render(request, 'surveys/preview_form.html', {'survey': survey, 'token': token})
+	# Get location info from session for display
+	from answers.models import State, City
+	location_info = None
+	state_code = request.session.get('preview_state_code')
+	city_ibge_code = request.session.get('preview_city_ibge_code')
+	
+	if state_code and city_ibge_code:
+		try:
+			state = State.objects.get(code=state_code)
+			city = City.objects.get(ibge_code=city_ibge_code)
+			location_info = f"{city.name} - {state.uf}"
+		except (State.DoesNotExist, City.DoesNotExist):
+			location_info = "Localização não encontrada"
+	
+	return render(request, 'surveys/preview_form.html', {
+		'survey': survey, 
+		'token': token,
+		'location_info': location_info
+	})
 
 
 def survey_preview_success(request, token: str):
@@ -391,6 +492,7 @@ def survey_preview_success(request, token: str):
 @get_survey_by_token_schema
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@require_token_not_revoked
 def api_survey_detail(request): 
 	token = request.GET.get('token')
 	if not token:

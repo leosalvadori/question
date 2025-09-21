@@ -8,16 +8,37 @@
 
 	<div class="flex items-end gap-3 mb-4">
 		<a href="{% url 'answers_summary' %}" class="px-3 py-1 bg-white text-slate-900 rounded">Voltar</a>
-		<form method="get" class="flex items-center gap-2">
-			<label class="text-sm text-slate-300">Itens/página</label>
-			<select name="page_size" class="border rounded p-1 text-black">
-				<option value="15" {% if page_obj.paginator.per_page == 15 %}selected{% endif %}>15</option>
-				<option value="30" {% if page_obj.paginator.per_page == 30 %}selected{% endif %}>30</option>
-				<option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50</option>
-			</select>
+		<form method="get" class="flex items-center gap-2 flex-wrap">
+			<div class="flex items-center gap-2">
+				<label class="text-sm text-slate-300">Estado</label>
+				<select name="state" id="state-filter" class="border rounded p-1 text-black">
+					<option value="">Todos</option>
+					{% for state in states %}
+					<option value="{{ state.id }}" {% if selected_state_id == state.id|stringformat:'s' %}selected{% endif %}>{{ state.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="flex items-center gap-2">
+				<label class="text-sm text-slate-300">Cidade</label>
+				<select name="city" id="city-filter" class="border rounded p-1 text-black">
+					<option value="">Todas</option>
+					{% for city in cities %}
+					<option value="{{ city.id }}" {% if selected_city_id == city.id|stringformat:'s' %}selected{% endif %}>{{ city.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="flex items-center gap-2">
+				<label class="text-sm text-slate-300">Itens/página</label>
+				<select name="page_size" class="border rounded p-1 text-black">
+					<option value="15" {% if page_obj.paginator.per_page == 15 %}selected{% endif %}>15</option>
+					<option value="30" {% if page_obj.paginator.per_page == 30 %}selected{% endif %}>30</option>
+					<option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50</option>
+				</select>
+			</div>
 			<input type="hidden" name="from" value="{{ request.GET.from }}" />
 			<input type="hidden" name="to" value="{{ request.GET.to }}" />
 			<button class="px-3 py-1 bg-blue-600 text-white rounded">Aplicar</button>
+			<a href="?" class="px-3 py-1 bg-gray-200 text-black rounded">Limpar</a>
 		</form>
 	</div>
 
@@ -82,6 +103,48 @@
 	</form>
 	{% include 'components/_pagination.html' with page_obj=page_obj extra_query=extra_query %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stateFilter = document.getElementById('state-filter');
+    const cityFilter = document.getElementById('city-filter');
+    const surveyId = {{ survey.id }};
+    
+    stateFilter.addEventListener('change', function() {
+        const stateId = this.value;
+        
+        // Clear city filter
+        cityFilter.innerHTML = '<option value="">Todas</option>';
+        
+        if (stateId) {
+            // Show loading
+            cityFilter.innerHTML = '<option value="">Carregando...</option>';
+            cityFilter.disabled = true;
+            
+            // Fetch cities for selected state
+            fetch(`/answers/${surveyId}/cities/?state_id=${stateId}`)
+                .then(response => response.json())
+                .then(data => {
+                    cityFilter.innerHTML = '<option value="">Todas</option>';
+                    data.cities.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city.id;
+                        option.textContent = city.name;
+                        cityFilter.appendChild(option);
+                    });
+                    cityFilter.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error loading cities:', error);
+                    cityFilter.innerHTML = '<option value="">Erro ao carregar</option>';
+                    cityFilter.disabled = false;
+                });
+        } else {
+            cityFilter.disabled = false;
+        }
+    });
+});
+</script>
 {% endblock %}
 
 
