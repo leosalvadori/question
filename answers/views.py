@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from io import BytesIO
 import json
 
@@ -20,6 +21,22 @@ from .models import State, City, Submission, SubmissionAnswer
 from .serializers import SubmissionCreateSerializer, SubmissionResponseSerializer
 from .schema import submit_answers_schema
 from companies.decorators import require_token_not_revoked
+
+
+def test_csv_export(request, survey_id: int):
+    """Test CSV export without authentication for debugging."""
+    survey = get_object_or_404(Survey.objects.select_related('company'), id=survey_id)
+    
+    import csv
+    resp = HttpResponse(content_type='text/csv')
+    resp['Content-Disposition'] = f'attachment; filename="test_export_{survey_id}.csv"'
+    writer = csv.writer(resp)
+    
+    writer.writerow(['Test', 'Export', 'Working'])
+    writer.writerow(['Survey ID', survey_id])
+    writer.writerow(['Survey Title', survey.title])
+    
+    return resp
 
 
 @submit_answers_schema
@@ -212,6 +229,100 @@ def survey_dashboard(request, survey_id: int):
     
     total_submissions = submissions_qs.count()
     last_submission = submissions_qs.order_by('-submitted_at').first()
+
+    # Check for export format
+    fmt = request.GET.get('format')
+    if fmt == 'csv':
+        import csv
+        resp = HttpResponse(content_type='text/csv; charset=utf-8')
+        resp['Content-Disposition'] = f'attachment; filename="dashboard_{survey.title}_{survey_id}.csv"'
+        resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        resp['Pragma'] = 'no-cache'
+        resp['Expires'] = '0'
+        writer = csv.writer(resp)
+        
+        # Get all questions for this survey
+        questions = Question.objects.filter(survey=survey).order_by('id')
+        
+        # Create header with basic info + all questions
+        header = ['Submission ID', 'Submitted At', 'IP Address', 'State', 'City', 'Latitude', 'Longitude']
+        for q in questions:
+            header.append(f'Q{q.id}: {q.question_text}')
+        writer.writerow(header)
+        
+        # Get all answers for submissions
+        answers_by_submission = {}
+        for ans in SubmissionAnswer.objects.filter(
+            submission__in=submissions_qs
+        ).select_related('question', 'selected_option'):
+            if ans.submission_id not in answers_by_submission:
+                answers_by_submission[ans.submission_id] = {}
+            answers_by_submission[ans.submission_id][ans.question_id] = ans
+        
+        # Write submissions data
+        for sub in submissions_qs.select_related('state', 'city'):
+            row = [
+                sub.id,
+                sub.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if sub.submitted_at else '',
+                sub.ip_address or '',
+                sub.state.name if sub.state else '',
+                sub.city.name if sub.city else '',
+                sub.latitude or '',
+                sub.longitude or '',
+            ]
+            
+            # Add answers for each question
+            for q in questions:
+                answer = answers_by_submission.get(sub.id, {}).get(q.id)
+                if answer:
+                    if answer.selected_option_id:
+                        answer_text = answer.selected_option.option_text
+                    else:
+                        answer_text = answer.text_response or ''
+                else:
+                    answer_text = ''
+                row.append(answer_text)
+            
+            writer.writerow(row)
+        return resp
+    
+    if fmt == 'json':
+        data = []
+        
+        # Get all answers for submissions
+        answers_by_submission = {}
+        for ans in SubmissionAnswer.objects.filter(
+            submission__in=submissions_qs
+        ).select_related('question', 'selected_option'):
+            if ans.submission_id not in answers_by_submission:
+                answers_by_submission[ans.submission_id] = {}
+            answers_by_submission[ans.submission_id][ans.question_id] = ans
+        
+        for sub in submissions_qs.select_related('state', 'city'):
+            submission_data = {
+                'id': sub.id,
+                'submitted_at': sub.submitted_at.isoformat() if sub.submitted_at else None,
+                'ip_address': sub.ip_address,
+                'state': sub.state.name if sub.state else None,
+                'city': sub.city.name if sub.city else None,
+                'latitude': float(sub.latitude) if sub.latitude else None,
+                'longitude': float(sub.longitude) if sub.longitude else None,
+                'answers': []
+            }
+            
+            # Add answers
+            for ans in answers_by_submission.get(sub.id, {}).values():
+                answer_data = {
+                    'question_id': ans.question_id,
+                    'question_text': ans.question.question_text,
+                    'selected_option_id': ans.selected_option_id,
+                    'selected_option_text': ans.selected_option.option_text if ans.selected_option_id else None,
+                    'text_response': ans.text_response,
+                }
+                submission_data['answers'].append(answer_data)
+            
+            data.append(submission_data)
+        return JsonResponse(data, safe=False)
 
     # Collect geo points for heatmap
     geo_points = []
