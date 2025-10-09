@@ -3,13 +3,12 @@ from . import views
 
 
 urlpatterns = [
-	# Token management
-	path('companies/<int:pk>/tokens/', views.company_tokens, name='company_tokens'),
-	path('companies/<int:pk>/tokens/create/', views.company_token_create, name='company_token_create'),
-	path('companies/<int:pk>/tokens/<int:token_id>/revoke/', views.company_token_revoke, name='company_token_revoke'),
-	
-	# Token refresh (standard JWT approach for mobile and web)
-	path('auth/refresh/', views.refresh_token, name='refresh_token'),
+	# API Accounts management (Basic Auth Authentication)
+	path('companies/<int:pk>/accounts/', views.company_accounts, name='company_accounts'),
+	path('companies/<int:pk>/accounts/create/', views.company_account_create, name='company_account_create'),
+	path('companies/<int:pk>/accounts/<int:account_id>/deactivate/', views.company_account_deactivate, name='company_account_deactivate'),
+	path('companies/<int:pk>/accounts/<int:account_id>/activate/', views.company_account_activate, name='company_account_activate'),
+	path('companies/<int:pk>/accounts/<int:account_id>/delete/', views.company_account_delete, name='company_account_delete'),
 	
 	# Status management
 	path('companies/<int:pk>/activate/', views.company_activate, name='company_activate'),

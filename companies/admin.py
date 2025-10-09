@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Company, CompanyToken, LastContact
+from .models import Company, LastContact, CompanyAPIAccount
 
 
 @admin.register(Company)
@@ -141,11 +141,25 @@ class CompanyAdmin(admin.ModelAdmin):
 	restore_payment.short_description = "Restaurar após pagamento"
 
 
-@admin.register(CompanyToken)
-class CompanyTokenAdmin(admin.ModelAdmin):
-	list_display = ('id', 'company', 'label', 'refresh_jti', 'created_at', 'revoked_at')
-	list_filter = ('company', 'revoked_at')
-	search_fields = ('label', 'refresh_jti')
+@admin.register(CompanyAPIAccount)
+class CompanyAPIAccountAdmin(admin.ModelAdmin):
+	list_display = ('id', 'username', 'company', 'label', 'is_active', 'created_at', 'last_used_at')
+	list_filter = ('is_active', 'company', 'created_at')
+	search_fields = ('username', 'label', 'company__name')
+	readonly_fields = ('created_at', 'updated_at', 'last_used_at', 'deactivated_at')
+	
+	fieldsets = (
+		('Informações da Conta', {
+			'fields': ('company', 'username', 'password', 'label')
+		}),
+		('Status', {
+			'fields': ('is_active', 'deactivated_at', 'last_used_at')
+		}),
+		('Informações do Sistema', {
+			'fields': ('created_at', 'updated_at'),
+			'classes': ('collapse',)
+		}),
+	)
 
 
 @admin.register(LastContact)

@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}
+	{% if action == 'delete' %}
+		Deletar Conta - {{ account.username }}
+	{% else %}
+		Desativar Conta - {{ account.username }}
+	{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+	<div class="glass-effect p-8 rounded-xl border border-border/40">
+		{% if action == 'delete' %}
+			<div class="text-center mb-6">
+				<div class="text-5xl mb-4">⚠️</div>
+				<h1 class="text-2xl font-semibold text-red-600 dark:text-red-400">Deletar Conta API</h1>
+			</div>
+			
+			<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+				<p class="text-red-800 dark:text-red-200 font-medium mb-2">
+					⚠️ Esta ação é <strong>permanente e irreversível</strong>!
+				</p>
+				<p class="text-sm text-red-700 dark:text-red-300">
+					Após deletar, esta conta não poderá mais ser usada para acessar a API e não poderá ser recuperada.
+				</p>
+			</div>
+		{% else %}
+			<div class="text-center mb-6">
+				<div class="text-5xl mb-4">⏸</div>
+				<h1 class="text-2xl font-semibold text-yellow-600 dark:text-yellow-400">Desativar Conta API</h1>
+			</div>
+			
+			<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+				<p class="text-yellow-800 dark:text-yellow-200 font-medium mb-2">
+					Esta conta será temporariamente desativada
+				</p>
+				<p class="text-sm text-yellow-700 dark:text-yellow-300">
+					Após desativar, esta conta não poderá mais fazer requisições à API. Você poderá reativá-la a qualquer momento.
+				</p>
+			</div>
+		{% endif %}
+		
+		<div class="bg-muted/50 rounded-lg p-4 mb-6">
+			<h3 class="font-semibold mb-3">Informações da Conta:</h3>
+			<dl class="space-y-2 text-sm">
+				<div class="flex">
+					<dt class="font-medium w-32">Empresa:</dt>
+					<dd class="text-muted-foreground">{{ company.name }}</dd>
+				</div>
+				<div class="flex">
+					<dt class="font-medium w-32">Username:</dt>
+					<dd class="font-mono">{{ account.username }}</dd>
+				</div>
+				{% if account.label %}
+				<div class="flex">
+					<dt class="font-medium w-32">Rótulo:</dt>
+					<dd class="text-muted-foreground">{{ account.label }}</dd>
+				</div>
+				{% endif %}
+				<div class="flex">
+					<dt class="font-medium w-32">Criada em:</dt>
+					<dd class="text-muted-foreground">{{ account.created_at|date:"d/m/Y H:i" }}</dd>
+				</div>
+				{% if account.last_used_at %}
+				<div class="flex">
+					<dt class="font-medium w-32">Último uso:</dt>
+					<dd class="text-muted-foreground">{{ account.last_used_at|date:"d/m/Y H:i" }}</dd>
+				</div>
+				{% endif %}
+			</dl>
+		</div>
+		
+		<p class="text-center text-muted-foreground mb-6">
+			{% if action == 'delete' %}
+				Tem certeza que deseja deletar permanentemente esta conta?
+			{% else %}
+				Tem certeza que deseja desativar esta conta?
+			{% endif %}
+		</p>
+		
+		<form method="post" class="flex gap-3 justify-center">
+			{% csrf_token %}
+			<button 
+				type="submit" 
+				class="px-6 py-2 {% if action == 'delete' %}bg-red-600 hover:bg-red-700{% else %}bg-yellow-500 hover:bg-yellow-600{% endif %} text-white rounded-lg transition-colors">
+				{% if action == 'delete' %}
+					🗑 Sim, Deletar Permanentemente
+				{% else %}
+					⏸ Sim, Desativar Conta
+				{% endif %}
+			</button>
+			<a 
+				href="{% url 'company_accounts' company.id %}" 
+				class="px-6 py-2 border border-border rounded-lg hover:bg-accent transition-colors">
+				Cancelar
+			</a>
+		</form>
+	</div>
+</div>
+{% endblock %}

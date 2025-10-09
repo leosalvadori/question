@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
-    'rest_framework_simplejwt',
     'drf_spectacular',
 
     'app',
@@ -167,43 +166,46 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'companies.authentication.CompanyAccountAuthentication',  # Basic Auth with API accounts
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
-        'rest_framework.permissions.DjangoModelPermissions',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-}
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=365 * 100),
 }
 
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Question API',
-    'DESCRIPTION': 'OpenAPI schema for the Question project',
-    'VERSION': '1.0.0',
+    'DESCRIPTION': 'API para gerenciamento de pesquisas e respostas.',
+    'VERSION': '2.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'CONTACT': {
         'name': 'API Support',
     },
-    # Enable Bearer/JWT auth button in Swagger and persist authorization
+    # Security schemes available
     'SECURITY_SCHEMES': {
-        'BearerAuth': {
+        'BasicAuth': {
             'type': 'http',
-            'scheme': 'bearer',
-            'bearerFormat': 'JWT',
+            'scheme': 'basic',
+            'description': 'Username e password da conta API',
         },
     },
-    # Apply Bearer globally (can be overridden per-view with extend_schema)
+    # Apply Basic Auth globally as the default method
     'SECURITY': [
-        {'BearerAuth': []},
+        {'BasicAuth': []},
     ],
     'SWAGGER_UI_SETTINGS': {
         'deepLinking': True,
         'persistAuthorization': True,
+        'displayRequestDuration': True,
+        'docExpansion': 'list',
+        'filter': True,
+        'showExtensions': True,
+        'showCommonExtensions': True,
+        'defaultModelsExpandDepth': 2,
+        'defaultModelExpandDepth': 2,
     },
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': False,
 }

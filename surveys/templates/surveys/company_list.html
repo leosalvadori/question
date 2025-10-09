@@ -129,7 +129,7 @@
 					{% if company.company_type == 'prospect' %}
 					<a href="{% url 'company_contacts' company.id %}" class="text-purple-400 hover:underline">Contatos</a>
 					{% endif %}
-					<a href="{% url 'company_tokens' company.id %}" class="text-emerald-400 hover:underline">Tokens</a>
+					<a href="{% url 'company_accounts' company.id %}" class="text-cyan-400 hover:underline" title="Gerenciar contas API">🔑 Contas</a>
 					<a href="{% url 'company_delete' company.id %}" class="text-red-400 hover:underline">Excluir</a>
 				</td>
 			</tr>

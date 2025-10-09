@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Contas API - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+	<div>
+		<h1 class="text-2xl font-semibold">Contas API - {{ company.name }}</h1>
+		<p class="text-sm text-muted-foreground mt-1">Gerencie as credenciais de acesso à API</p>
+	</div>
+	<a href="{% url 'company_account_create' company.id %}" 
+	   class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">
+		➕ Nova Conta
+	</a>
+</div>
+
+{% if messages %}
+<div class="mb-4">
+	{% for message in messages %}
+	<div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300{% elif message.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300{% elif message.tags == 'warning' %}bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300{% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300{% endif %} mb-2">
+		{{ message }}
+	</div>
+	{% endfor %}
+</div>
+{% endif %}
+
+<div class="glass-effect rounded-xl border border-border/40 overflow-x-auto">
+	<table class="min-w-full">
+		<thead class="text-left text-sm text-muted-foreground border-b border-border/40">
+			<tr>
+				<th class="py-3 px-4 w-48">Username</th>
+				<th class="py-3 px-4">Rótulo</th>
+				<th class="py-3 px-4 w-28">Status</th>
+				<th class="py-3 px-4 w-44">Criado em</th>
+				<th class="py-3 px-4 w-44">Último uso</th>
+				<th class="py-3 px-4 w-44">Ações</th>
+			</tr>
+		</thead>
+		<tbody class="divide-y divide-border/40">
+			{% for account in accounts %}
+			<tr class="{% if not account.is_active %}opacity-60{% endif %}">
+				<td class="py-3 px-4">
+					<span class="font-mono text-sm">{{ account.username }}</span>
+				</td>
+				<td class="py-3 px-4">
+					{{ account.label|default:'—' }}
+				</td>
+				<td class="py-3 px-4">
+					{% if account.is_active %}
+						<span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+							✓ Ativa
+						</span>
+					{% else %}
+						<span class="inline-flex items-center px-2 py-1 text-xs rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+							✗ Inativa
+						</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4 text-sm">
+					{{ account.created_at|date:"d/m/Y H:i" }}
+				</td>
+				<td class="py-3 px-4 text-sm">
+					{% if account.last_used_at %}
+						<span title="{{ account.last_used_at|date:'d/m/Y H:i:s' }}">
+							{{ account.last_used_at|date:"d/m/Y H:i" }}
+						</span>
+					{% else %}
+						<span class="text-muted-foreground italic">Nunca usada</span>
+					{% endif %}
+				</td>
+				<td class="py-3 px-4">
+					<div class="flex gap-2 flex-wrap">
+						{% if account.is_active %}
+							<form method="post" action="{% url 'company_account_deactivate' company.id account.id %}" class="inline">
+								{% csrf_token %}
+								<button type="submit" 
+										class="px-3 py-1 text-xs rounded bg-yellow-500 hover:bg-yellow-600 text-white transition-colors"
+										title="Desativar conta">
+									⏸ Desativar
+								</button>
+							</form>
+						{% else %}
+							<form method="post" action="{% url 'company_account_activate' company.id account.id %}" class="inline">
+								{% csrf_token %}
+								<button type="submit" 
+										class="px-3 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors"
+										title="Reativar conta">
+									▶ Reativar
+								</button>
+							</form>
+						{% endif %}
+						<a href="{% url 'company_account_delete' company.id account.id %}"
+						   class="px-3 py-1 text-xs rounded bg-destructive hover:opacity-90 text-destructive-foreground transition-colors"
+						   title="Deletar permanentemente">
+							🗑 Deletar
+						</a>
+					</div>
+				</td>
+			</tr>
+			{% empty %}
+			<tr>
+				<td colspan="6" class="py-12 px-4 text-center">
+					<div class="text-muted-foreground">
+						<div class="text-4xl mb-2">🔑</div>
+						<p class="text-lg font-medium">Nenhuma conta criada ainda</p>
+						<p class="text-sm mt-1">Crie a primeira conta API para começar</p>
+					</div>
+				</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+
+<div class="mt-6">
+	<a href="{% url 'company_detail' company.id %}" 
+	   class="px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors">
+		← Voltar para Empresa
+	</a>
+</div>
+{% endblock %}

@@ -1,85 +1,9 @@
-from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
-from django.db.models import Q
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-from drf_spectacular.types import OpenApiTypes
-
-from .models import Company, CompanyToken, LastContact
-
-
-@login_required
-def company_tokens(request, pk: int):
-	company = get_object_or_404(Company, pk=pk)
-	# Ordenar tokens: ativos e válidos primeiro, depois revogados, depois expirados
-	from django.utils import timezone
-	now = timezone.now()
-	
-	tokens = company.api_tokens.annotate(
-		is_active=~Q(revoked_at__isnull=False),
-		is_valid=Q(expires_at__gt=now) | Q(expires_at__isnull=True)
-	).order_by(
-		'-is_active',  # Ativos primeiro (True antes de False)
-		'-is_valid',   # Válidos primeiro (True antes de False)
-		'-created_at'  # Mais recentes primeiro dentro de cada grupo
-	)
-	
-	return render(request, 'companies/company_tokens.html', {'company': company, 'tokens': tokens})
-
-
-@login_required
-def company_token_create(request, pk: int):
-	company = get_object_or_404(Company, pk=pk)
-	if request.method == 'POST':
-		label = request.POST.get('label', '').strip()
-		# Create Refresh + Access (we'll present both; store refresh JTI for revoke)
-		refresh = RefreshToken.for_user(request.user)
-		refresh['company_id'] = company.pk
-		access = refresh.access_token
-		access['company_id'] = company.pk
-		
-		# Store both tokens for display and refresh purposes
-		access_token_str = str(access)
-		refresh_token_str = str(refresh)
-		
-		# Calculate expiration time (1 day from now, matching SIMPLE_JWT settings)
-		expires_at = timezone.now() + timedelta(days=1)
-		
-		CompanyToken.objects.create(
-			company=company, 
-			label=label, 
-			refresh_jti=str(access['jti']),  # Usar JTI do access token, não do refresh
-			access_token=access_token_str,
-			refresh_token=refresh_token_str,
-			expires_at=expires_at
-		)
-		return render(request, 'companies/company_token_created.html', {
-			'company': company,
-			'access_token': access_token_str,
-			'refresh_token': str(refresh),
-		})
-	return redirect('company_tokens', pk=company.pk)
-
-
-@login_required
-def company_token_revoke(request, pk: int, token_id: int):
-	company = get_object_or_404(Company, pk=pk)
-	token = get_object_or_404(CompanyToken, pk=token_id, company=company)
-	if request.method == 'POST':
-		token.revoked_at = timezone.now()
-		token.save(update_fields=['revoked_at'])
-		return redirect('company_tokens', pk=company.pk)
-	return render(request, 'companies/confirm_revoke.html', {'company': company, 'token': token})
+from .models import Company, LastContact, CompanyAPIAccount
 
 
 # Status management views
@@ -213,146 +137,122 @@ def company_contact_delete(request, pk: int, contact_id: int):
 	
 	return render(request, 'companies/contact_confirm_delete.html', context)
 
+# ==================== API Accounts Management ====================
 
-@extend_schema(
-	summary="Refresh Access Token",
-	description="Refresh access token using refresh token from request body.",
-	request={
-		'application/json': {
-			'type': 'object',
-			'properties': {
-				'refresh': {
-					'type': 'string',
-					'description': 'The refresh token to use for generating a new access token',
-					'example': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...'
-				}
-			},
-			'required': ['refresh']
-		}
-	},
-	responses={
-		200: {
-			'description': 'Token refreshed successfully',
-			'content': {
-				'application/json': {
-					'type': 'object',
-					'properties': {
-						'access_token': {
-							'type': 'string',
-							'description': 'New access token',
-							'example': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...'
-						},
-						'expires_at': {
-							'type': 'string',
-							'format': 'date-time',
-							'description': 'Token expiration time',
-							'example': '2024-01-15T10:30:00.000Z'
-						},
-						'message': {
-							'type': 'string',
-							'description': 'Success message',
-							'example': 'Token refreshed successfully'
-						}
-					}
-				}
-			}
-		},
-		400: {
-			'description': 'Bad request - Invalid or missing refresh token',
-			'content': {
-				'application/json': {
-					'type': 'object',
-					'properties': {
-						'error': {
-							'type': 'string',
-							'description': 'Error message',
-							'example': 'Refresh token is required'
-						}
-					}
-				}
-			}
-		},
-		404: {
-			'description': 'Token not found or has been revoked',
-			'content': {
-				'application/json': {
-					'type': 'object',
-					'properties': {
-						'error': {
-							'type': 'string',
-							'description': 'Error message',
-							'example': 'Token not found or has been revoked'
-						}
-					}
-				}
-			}
-		}
+@login_required
+def company_accounts(request, pk: int):
+	"""List all API accounts for a company."""
+	company = get_object_or_404(Company, pk=pk)
+	accounts = company.api_accounts.all()
+	
+	context = {
+		'company': company,
+		'accounts': accounts,
 	}
-)
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def refresh_token(request):
-	"""
-	Refresh access token using refresh token from request body.
-	This is the standard JWT approach for mobile apps.
-	"""
-	try:
-		refresh_token_str = request.data.get('refresh')
+	
+	return render(request, 'companies/company_accounts.html', context)
+
+
+@login_required
+def company_account_create(request, pk: int):
+	"""Create new API account for a company."""
+	company = get_object_or_404(Company, pk=pk)
+	
+	if request.method == 'POST':
+		username = request.POST.get('username', '').strip()
+		password = request.POST.get('password', '').strip()
+		label = request.POST.get('label', '').strip()
 		
-		if not refresh_token_str:
-			return Response(
-				{'error': 'Refresh token is required'}, 
-				status=status.HTTP_400_BAD_REQUEST
-			)
+		# Validation
+		if not username or not password:
+			messages.error(request, 'Username e senha são obrigatórios')
+			return render(request, 'companies/company_account_form.html', {
+				'company': company,
+				'username': username,
+				'label': label,
+			})
 		
-		# Validate the refresh token
-		refresh = RefreshToken(refresh_token_str)
+		if len(password) < 8:
+			messages.error(request, 'A senha deve ter pelo menos 8 caracteres')
+			return render(request, 'companies/company_account_form.html', {
+				'company': company,
+				'username': username,
+				'label': label,
+			})
 		
-		# Extract company_id from the refresh token
-		company_id = refresh.get('company_id')
-		if not company_id:
-			return Response(
-				{'error': 'Invalid refresh token: no company_id found'}, 
-				status=status.HTTP_400_BAD_REQUEST
-			)
+		if CompanyAPIAccount.objects.filter(username=username).exists():
+			messages.error(request, 'Username já existe. Escolha outro.')
+			return render(request, 'companies/company_account_form.html', {
+				'company': company,
+				'label': label,
+			})
 		
-		# Find the corresponding CompanyToken
-		try:
-			company_token = CompanyToken.objects.get(
-				company_id=company_id,
-				refresh_token=refresh_token_str,
-				revoked_at__isnull=True
-			)
-		except CompanyToken.DoesNotExist:
-			return Response(
-				{'error': 'Token not found or has been revoked'}, 
-				status=status.HTTP_404_NOT_FOUND
-			)
-		
-		# Generate new access token
-		new_access = refresh.access_token
-		new_access['company_id'] = company_id
-		
-		# Update the access token in database
-		company_token.access_token = str(new_access)
-		company_token.expires_at = timezone.now() + timedelta(days=1)
-		company_token.save()
-		
-		return Response({
-			'access_token': str(new_access),
-			'expires_at': company_token.expires_at.isoformat(),
-			'message': 'Token refreshed successfully'
-		})
-		
-	except TokenError as e:
-		return Response(
-			{'error': f'Invalid refresh token: {str(e)}'}, 
-			status=status.HTTP_400_BAD_REQUEST
+		# Create account with hashed password
+		from django.contrib.auth.hashers import make_password
+		account = CompanyAPIAccount.objects.create(
+			company=company,
+			username=username,
+			password=make_password(password),
+			label=label
 		)
-	except Exception as e:
-		return Response(
-			{'error': f'Unexpected error: {str(e)}'}, 
-			status=status.HTTP_500_INTERNAL_SERVER_ERROR
-		)
+		
+		messages.success(request, f'Conta "{username}" criada com sucesso!')
+		return redirect('company_accounts', pk=pk)
+	
+	return render(request, 'companies/company_account_form.html', {'company': company})
+
+
+@login_required
+def company_account_deactivate(request, pk: int, account_id: int):
+	"""Deactivate an API account."""
+	company = get_object_or_404(Company, pk=pk)
+	account = get_object_or_404(CompanyAPIAccount, pk=account_id, company=company)
+	
+	if request.method == 'POST':
+		account.deactivate()
+		messages.warning(request, f'Conta "{account.username}" foi desativada')
+		return redirect('company_accounts', pk=pk)
+	
+	context = {
+		'company': company,
+		'account': account,
+		'action': 'deactivate',
+	}
+	return render(request, 'companies/company_account_confirm.html', context)
+
+
+@login_required
+def company_account_activate(request, pk: int, account_id: int):
+	"""Reactivate an API account."""
+	company = get_object_or_404(Company, pk=pk)
+	account = get_object_or_404(CompanyAPIAccount, pk=account_id, company=company)
+	
+	if request.method == 'POST':
+		account.activate()
+		messages.success(request, f'Conta "{account.username}" foi reativada')
+		return redirect('company_accounts', pk=pk)
+	
+	# No need for confirmation page, just redirect back
+	return redirect('company_accounts', pk=pk)
+
+
+@login_required
+def company_account_delete(request, pk: int, account_id: int):
+	"""Delete an API account permanently."""
+	company = get_object_or_404(Company, pk=pk)
+	account = get_object_or_404(CompanyAPIAccount, pk=account_id, company=company)
+	
+	if request.method == 'POST':
+		username = account.username
+		account.delete()
+		messages.success(request, f'Conta "{username}" foi deletada permanentemente')
+		return redirect('company_accounts', pk=pk)
+	
+	context = {
+		'company': company,
+		'account': account,
+		'action': 'delete',
+	}
+	return render(request, 'companies/company_account_confirm.html', context)
 
 
