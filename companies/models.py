@@ -287,3 +287,71 @@ class LastContact(models.Model):
 	def __str__(self) -> str:  # type: ignore[override]
 		return f"{self.company.name} - {self.contact_date.strftime('%d/%m/%Y %H:%M')}"
 
+
+class CompanyAPIAccount(models.Model):
+	"""API Account for company authentication - replaces JWT tokens."""
+	company = models.ForeignKey(
+		Company,
+		on_delete=models.CASCADE,
+		related_name='api_accounts',
+		help_text='Empresa associada a esta conta'
+	)
+	username = models.CharField(
+		max_length=150,
+		unique=True,
+		db_index=True,
+		help_text='Nome de usuário único para autenticação'
+	)
+	password = models.CharField(
+		max_length=128,
+		help_text='Senha hash para autenticação'
+	)
+	label = models.CharField(
+		max_length=100,
+		blank=True,
+		help_text='Rótulo descritivo para identificar a conta'
+	)
+	is_active = models.BooleanField(
+		default=True,
+		help_text='Define se a conta está ativa'
+	)
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+	deactivated_at = models.DateTimeField(
+		null=True,
+		blank=True,
+		help_text='Data de desativação da conta'
+	)
+	last_used_at = models.DateTimeField(
+		null=True,
+		blank=True,
+		help_text='Última vez que esta conta foi usada'
+	)
+
+	class Meta:
+		db_table = 'company_api_accounts'
+		ordering = ['-is_active', '-created_at']
+		verbose_name = 'Conta API da Empresa'
+		verbose_name_plural = 'Contas API das Empresas'
+
+	def __str__(self) -> str:  # type: ignore[override]
+		status = 'ativa' if self.is_active else 'inativa'
+		return f"{self.username} - {self.company.name} ({status})"
+
+	def deactivate(self) -> None:
+		"""Deactivate this API account."""
+		self.is_active = False
+		self.deactivated_at = timezone.now()
+		self.save(update_fields=['is_active', 'deactivated_at', 'updated_at'])
+
+	def activate(self) -> None:
+		"""Activate this API account."""
+		self.is_active = True
+		self.deactivated_at = None
+		self.save(update_fields=['is_active', 'deactivated_at', 'updated_at'])
+
+	def mark_used(self) -> None:
+		"""Update last_used_at timestamp."""
+		self.last_used_at = timezone.now()
+		self.save(update_fields=['last_used_at'])
+

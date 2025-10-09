@@ -5,10 +5,12 @@
 {% block content %}
 <div class="flex items-center justify-between mb-6">
 	<h1 class="text-2xl font-semibold">{{ company.name }}</h1>
-	<div class="space-x-2">
+	<div class="flex gap-2">
 		<a href="{% url 'company_update' company.id %}" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">Editar</a>
 		<a href="{% url 'company_delete' company.id %}" class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">Excluir</a>
-		<a href="{% url 'company_tokens' company.id %}" class="px-4 py-2 border border-border rounded-lg hover:bg-accent">Tokens JWT</a>
+		<a href="{% url 'company_accounts' company.id %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors" title="Gerenciar contas de acesso à API">
+			🔑 Contas API
+		</a>
 	</div>
 </div>
 

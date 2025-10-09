@@ -7,7 +7,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
-from companies.decorators import require_token_not_revoked
 
 
 @login_required(login_url='login')
@@ -23,18 +22,17 @@ def home(request):
 @extend_schema(
     tags=['Health'],
     summary='Ping endpoint',
-    description='Simple endpoint to test JWT authentication. Returns pong if token is valid and not revoked.',
+    description='Simple endpoint to test authentication. Returns pong if authenticated. Supports Basic Auth (username/password) or Bearer Token (JWT).',
     operation_id='ping',
     responses={
         200: {'type': 'string', 'example': 'pong'},
-        401: {'type': 'object', 'example': {'detail': 'Token has been revoked.'}},
+        401: {'type': 'object', 'example': {'detail': 'Authentication credentials were not provided.'}},
     },
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@require_token_not_revoked
 def ping(request):
-    """Simple ping endpoint to test JWT authentication."""
+    """Simple ping endpoint to test authentication (Basic Auth or JWT)."""
     return Response('pong', status=status.HTTP_200_OK)
 
 

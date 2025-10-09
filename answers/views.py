@@ -20,7 +20,6 @@ from surveys.models import Survey, Question
 from .models import State, City, Submission, SubmissionAnswer
 from .serializers import SubmissionCreateSerializer, SubmissionResponseSerializer
 from .schema import submit_answers_schema
-from companies.decorators import require_token_not_revoked
 
 
 def test_csv_export(request, survey_id: int):
@@ -42,13 +41,18 @@ def test_csv_export(request, survey_id: int):
 @submit_answers_schema
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-@require_token_not_revoked
 def submit_answers(request):
-    serializer = SubmissionCreateSerializer(data=request.data, context={'request': request})
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    submission = serializer.save()
-    return Response(SubmissionResponseSerializer(submission).data, status=status.HTTP_201_CREATED)
+	"""
+	Submit answers for a survey.
+	
+	Authentication: Basic Auth (username/password) or Bearer Token (legacy JWT)
+	The authentication is handled by CompanyAccountAuthentication or JWTAuthentication.
+	"""
+	serializer = SubmissionCreateSerializer(data=request.data, context={'request': request})
+	if not serializer.is_valid():
+		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+	submission = serializer.save()
+	return Response(SubmissionResponseSerializer(submission).data, status=status.HTTP_201_CREATED)
 
 
 

@@ -15,7 +15,6 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema
 from .schema import get_survey_by_token_schema
 from answers.serializers import SubmissionCreateSerializer
-from companies.decorators import require_token_not_revoked
 
 
 # Companies
@@ -492,8 +491,12 @@ def survey_preview_success(request, token: str):
 @get_survey_by_token_schema
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@require_token_not_revoked
-def api_survey_detail(request): 
+def api_survey_detail(request):
+	"""
+	Get survey detail by token query param.
+	
+	Authentication: Basic Auth (username/password) or Bearer Token (legacy JWT)
+	"""
 	token = request.GET.get('token')
 	if not token:
 		return Response({'detail': 'token ausente'}, status=status.HTTP_400_BAD_REQUEST)
